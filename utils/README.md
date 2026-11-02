@@ -1,13 +1,14 @@
 # utils/
 
-Shared helpers for the exploratory analysis. Five modules, each doing one job:
+Shared helpers for the analysis. These modules each do one job:
 
 | Module | What it gives you |
 |---|---|
 | [plotting.py](plotting.py) | `EDAPlotter` — the whole chart set behind one class |
 | [triple_plot.py](triple_plot.py) | `normality_report` — a three-panel distribution diagnostic |
 | [cred_intervals.py](cred_intervals.py) | `credible_intervals` — a posterior's intervals, exact and simulated, in one table |
-| [geo.py](geo.py) | coordinate sanity checks against a Cundinamarca bounding box |
+| [geo.py](geo.py) | coordinate sanity checks, and locality/municipality boxes for the cleaning |
+| [preprocessing.py](preprocessing.py) | the sklearn pieces stock sklearn lacks: frequency encoding, 1-NN imputation, an outlier filter |
 | [map_graph.py](map_graph.py) | the listings drawn on an interactive map |
 
 Notebooks run from `notebooks/`, so they put the repository root on `sys.path`
@@ -347,6 +348,96 @@ masks and counted on its own.
 `count_outside_bogota` returns `total`, `inside`, `outside`, `missing`,
 `pct_outside` and the box used, with `inside + outside + missing == total`
 always holding.
+
+### Localities and municipalities
+
+The second half of the module is the coordinate cleaning from
+[data_cleaning.ipynb](../notebooks/data_cleaning.ipynb), moved here so
+[BART_Trees.ipynb](../notebooks/BART_Trees.ipynb) can run it without copying it.
+
+| Name | What it does |
+|---|---|
+| `LOCALITIES` | Bogotá's 20 localities as boxes, under their official names. |
+| `LOCALITIES_BY_AREA` | The same boxes, smallest first, for when a point needs one answer. |
+| `MUNICIPALITIES` | Bogotá and five savanna towns, smallest first. |
+| `LOCALITY_ALIASES` | Maps the site's spelling to the `LOCALITIES` key. |
+| `locality_price_outliers` | Flags prices beyond 2.5 × IQR of the row's own locality, when the point lies in that locality's box. |
+| `classify_city` | Names the municipality from the coordinates; first matching box wins. |
+| `fill_locality` | Fills a missing locality with the first box the point falls in. |
+| `snap_locality` | Assigns what is still missing to the nearest box within 0.02°. |
+
+**Normalise the labels before `locality_price_outliers`.** The site writes
+"Usaquen", "Santafe", "Ciudad Bolivar"; the boxes are keyed "Usaquén",
+"Santa Fe", "Ciudad Bolívar". A box with no matching label flags nothing, so
+without `df["locality"].replace(LOCALITY_ALIASES)` half the localities —
+Usaquén, the largest market, among them — are silently never checked. That is
+what the notebook version did.
+
+**A row is judged by its own locality only.** The notebook version tested each
+point against every box it fell in. The boxes overlap, so once the names match,
+Engativá's fences (built from few listings, upper fence ≈ 878M COP) flag 1,591
+listings in Suba and Barrios Unidos, none of them in Engativá. Restricted to the
+row's own label, the rule flags 577 rows, against 473 for the notebook.
+
+All four functions return a new `Series` instead of writing into the frame, and
+`classify_city` marks a miss with `NaN` rather than `pd.NA`: `SimpleImputer`
+does not see `pd.NA` as missing in a string column.
+
+---
+
+## preprocessing.py
+
+The preparation of [data_cleaning.ipynb](../notebooks/data_cleaning.ipynb) and
+[data_preparation.ipynb](../notebooks/data_preparation.ipynb), reshaped into
+pieces for an sklearn `Pipeline`, so it can be learned inside each
+cross-validation fold rather than once on the whole dataset.
+[BART_Trees.ipynb](../notebooks/BART_Trees.ipynb) shows how they fit together.
+
+Stock sklearn objects (`SimpleImputer`, `IterativeImputer`, `OneHotEncoder`,
+`ColumnTransformer`, `TransformedTargetRegressor`) do most of the work. This
+module only holds what they cannot do.
+
+**Plain functions, for `FunctionTransformer`.** They learn nothing, so they
+need no class.
+
+| Function | What it does |
+|---|---|
+| `impute_bimodal` | Fills NaN with a 50/50 draw between two values, so the mode is not inflated. |
+| `clip_round` | Clips at 0 and rounds to int; MICE returns counts as fractions. |
+| `months_listed` | `published_at` → `meses_ofertado`, measured to a fixed scrape month. |
+| `amenity_features` | `Trans Publico cerc`, `Zona Residencial` and `n_amenities` from the pipe-joined list. |
+| `grouped_feature_name` | An `OneHotEncoder` `feature_name_combiner`: `x_grouped_<cat>`, and `x_grouped_Otros` for the infrequent pool. |
+
+`months_listed_names` and `amenity_feature_names` are the `feature_names_out`
+of the two functions that rename their column. `log_feature_names` is the one
+to pair with `FunctionTransformer(np.log)`: it prefixes `log_`, the naming the
+notebooks already use for `log_price_amount`.
+
+**Estimators.**
+
+| Class | What it does |
+|---|---|
+| `NearestNeighborImputer` | Fills a category from its nearest neighbour in space. Pass the column, then the coordinates; it returns the column alone. |
+| `FrequencyEncoder` | Replaces each category by its share of the training rows. `top_n` pools the rest under "Otros" first. |
+| `OutlierFilterRegressor` | Drops outlier rows from X and y while fitting, then fits the regressor it wraps. |
+
+### Why the outlier filter wraps the model
+
+An sklearn step must return as many rows as it was given, so no transformer can
+drop outliers. `OutlierFilterRegressor` therefore takes the downstream steps as
+its `regressor`. In `fit` it applies the business-rule `bounds`, then the
+`iqr_multiplier` × IQR fences, computed on the rows the rules kept, and fits a
+clone of the regressor on what survives. `predict` lets every row through: a
+test listing is never dropped, the model just never learned from the outliers.
+
+The rules see `y` exactly as the filter receives it. Put a
+`TransformedTargetRegressor` *inside* the filter, not around it, if the rules
+are meant to read prices in pesos. `ratio_columns` derives a column only the
+rules see, such as `price_per_m2`, which the model must not get because it is
+computed from the target.
+
+After fitting, `n_dropped_business_`, `n_dropped_iqr_`, `kept_` and `fences_`
+report what was removed and why.
 
 ---
 

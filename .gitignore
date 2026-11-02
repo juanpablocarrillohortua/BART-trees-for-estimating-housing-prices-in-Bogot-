@@ -1,6 +1,7 @@
 .DS_store
 *.csv
 out-venta-bogota
+cv_cache/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

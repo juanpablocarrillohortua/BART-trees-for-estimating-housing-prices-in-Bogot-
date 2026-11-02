@@ -166,10 +166,15 @@ validation and no test**, so nothing catches a drift from the script
 automatically; re-check against it by hand after touching the four methods. The
 figure helpers below them are not to be restyled. No arviz/PyMC/Stan;
 [utils/geo.py](utils/geo.py) holds the
-Cundinamarca bounding-box coordinate sanity check; [utils/map_graph.py](utils/map_graph.py)
+Cundinamarca bounding-box coordinate sanity check plus the locality/municipality
+boxes the cleaning uses; [utils/map_graph.py](utils/map_graph.py)
 holds `create_map`, a Folium marker-cluster map (one marker per row, so filter
-before calling it on all 31k listings). [utils/README.md](utils/README.md)
-documents all five.
+before calling it on all 31k listings). [utils/preprocessing.py](utils/preprocessing.py)
+holds the sklearn pieces that `notebooks/BART_Trees.ipynb` assembles into one
+pipeline (imputation → outlier filter → encoding → amenities → model):
+`OutlierFilterRegressor` drops rows only while fitting, by wrapping the
+downstream steps, because an sklearn transformer cannot drop rows.
+[utils/README.md](utils/README.md) documents them.
 
 Notebooks run from `notebooks/`, so they prepend the parent directory to
 `sys.path` before `from utils... import ...`. Figure text is Spanish (the
