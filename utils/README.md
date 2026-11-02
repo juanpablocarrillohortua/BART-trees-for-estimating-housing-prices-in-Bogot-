@@ -458,3 +458,21 @@ Two things worth knowing before you call it on the full dataset:
 - **Clean the coordinates first.** The map centres on the mean latitude and
   longitude, so a handful of broken points drag the whole view off Bogotá. Use
   `outside_bbox_mask` from [geo.py](geo.py) to drop them before mapping.
+
+**Names and colours.** `name_col` puts each point's name in a hover tooltip and
+at the top of its popup. `label_col` colours the markers by that column's value:
+each label becomes a layer, and the map's legend lists the layers with their
+colour and switches them on and off. Missing labels go to a gray
+"Sin etiqueta" layer. Colours come from a fixed palette in sorted-label order;
+`colors={"positive": "green", "negative": "red"}` overrides it, with
+`folium.Icon` colour names, and any other name raises an error. Pass
+`cluster=False` when you colour a small set: a cluster's count bubble is
+coloured by size, not by label, so clustering hides the colours you asked for.
+Called with only a frame, `create_map(df)` draws what it always did.
+
+**In VS Code, display it through `show_map`:** `show_map(create_map(df))`.
+Folium's own display wraps the page in an `<iframe srcdoc=...>`, which VS Code
+leaves blank behind the "Make this Notebook Trusted to load map" text.
+`show_map` passes the same page as a base64 `data:` URI instead, at a fixed
+`height` in pixels. `inline=True` embeds it without any iframe, as a fallback;
+folium's CSS then reaches the rest of the cell output.

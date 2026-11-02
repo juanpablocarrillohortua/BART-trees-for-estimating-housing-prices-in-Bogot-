@@ -5,6 +5,7 @@ Permite usarlo dentro de Pipeline, GridSearchCV, cross_validate, etc.
 
 Requiere:  pip install stochtree scikit-learn numpy scipy pandas
 """
+
 from __future__ import annotations
 
 from typing import Any, Literal, Optional, Sequence
@@ -40,8 +41,9 @@ def folded_normal_quantiles(n: int) -> NDArray[np.float64]:
     return norm.ppf((1 + p_tilde) / 2)
 
 
-def robust_sigma2(abs_sorted: NDArray[np.float64], z: NDArray[np.float64],
-                  frac: float = 0.25) -> float:
+def robust_sigma2(
+    abs_sorted: NDArray[np.float64], z: NDArray[np.float64], frac: float = 0.25
+) -> float:
     """Estimación robusta de sigma^2 de los datos típicos (ec. 6).
 
     Parameters
@@ -62,8 +64,12 @@ def robust_sigma2(abs_sorted: NDArray[np.float64], z: NDArray[np.float64],
     return float(np.sum(abs_sorted[:k] ** 2) / np.sum(z[:k] ** 2))
 
 
-def estimate_p(abs_sorted: NDArray[np.float64], z: NDArray[np.float64],
-               sigma2: float, Q: float) -> tuple[float, NDArray[np.float64]]:
+def estimate_p(
+    abs_sorted: NDArray[np.float64],
+    z: NDArray[np.float64],
+    sigma2: float,
+    Q: float,
+) -> tuple[float, NDArray[np.float64]]:
     """Proporción estimada de datos limpios (ec. 7).
 
     Parameters
@@ -85,8 +91,9 @@ def estimate_p(abs_sorted: NDArray[np.float64], z: NDArray[np.float64],
         Los cocientes r_i = s_i^2 / E(s_i^2) de cada posición.
     """
     i: NDArray[np.int64] = np.arange(1, len(abs_sorted) + 1)
-    ratio: NDArray[np.float64] = ((np.cumsum(abs_sorted ** 2) / i)
-                                  / (sigma2 * np.cumsum(z ** 2) / i))
+    ratio: NDArray[np.float64] = (np.cumsum(abs_sorted**2) / i) / (
+        sigma2 * np.cumsum(z**2) / i
+    )
     return float(np.sum(ratio <= Q) / len(abs_sorted)), ratio
 
 
@@ -172,12 +179,25 @@ class BARTAtrRegressor(RegressorMixin, BaseEstimator):
         Número de iteraciones de recorte realizadas.
     """
 
-    def __init__(self, Q: float = 1.28, trim: bool = True, sigma_frac: float = 0.25,
-                 p_min: float = 0.5, tol: float = 1e-4, max_iter: int = 20,
-                 num_trees: int = 50, alpha: float = 0.95, beta: float = 2.0,
-                 k: float = 2.0, nu: float = 3.0, q: float = 0.9,
-                 num_burnin: int = 500, num_mcmc: int = 1000, num_threads: int = 1,
-                 random_state: Optional[int] = None) -> None:
+    def __init__(
+        self,
+        Q: float = 1.28,
+        trim: bool = True,
+        sigma_frac: float = 0.25,
+        p_min: float = 0.5,
+        tol: float = 1e-4,
+        max_iter: int = 20,
+        num_trees: int = 50,
+        alpha: float = 0.95,
+        beta: float = 2.0,
+        k: float = 2.0,
+        nu: float = 3.0,
+        q: float = 0.9,
+        num_burnin: int = 500,
+        num_mcmc: int = 1000,
+        num_threads: int = 1,
+        random_state: Optional[int] = None,
+    ) -> None:
         self.Q = Q
         self.trim = trim
         self.sigma_frac = sigma_frac
@@ -196,8 +216,9 @@ class BARTAtrRegressor(RegressorMixin, BaseEstimator):
         self.random_state = random_state
 
     # --- Priors de Chipman et al. (2010) --------------------------------
-    def _chipman_priors(self, X: NDArray[np.float64],
-                        y: NDArray[np.float64]) -> tuple[dict[str, Any], dict[str, Any]]:
+    def _chipman_priors(
+        self, X: NDArray[np.float64], y: NDArray[np.float64]
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
         """Traduce (k, nu, q) a los parámetros de stochtree.
 
         stochtree estandariza y internamente (media 0, desviación 1), así que
@@ -225,31 +246,50 @@ class BARTAtrRegressor(RegressorMixin, BaseEstimator):
         lam: float = s2 * chi2.ppf(1 - self.q, self.nu) / self.nu
 
         # mu_hoja ~ N(0, sigma_mu^2), con sigma_mu = rango(y) / (2 k sqrt(m)).
-        sigma_mu: float = (y_std.max() - y_std.min()) / (2 * self.k * np.sqrt(self.num_trees))
+        sigma_mu: float = (y_std.max() - y_std.min()) / (
+            2 * self.k * np.sqrt(self.num_trees)
+        )
 
-        return ({"sigma2_global_shape": self.nu / 2,
-                 "sigma2_global_scale": self.nu * lam / 2},
-                {"sigma2_leaf_init": sigma_mu ** 2,
-                 "sample_sigma2_leaf": False})     # fijo, como en Chipman
+        return (
+            {
+                "sigma2_global_shape": self.nu / 2,
+                "sigma2_global_scale": self.nu * lam / 2,
+            },
+            {"sigma2_leaf_init": sigma_mu**2, "sample_sigma2_leaf": False},
+        )  # fijo, como en Chipman
 
     # --- BART individual (una cadena MCMC completa) -----------------------
-    def _fit_bart(self, X: NDArray[np.float64], y: NDArray[np.float64]) -> BARTModel:
+    def _fit_bart(
+        self, X: NDArray[np.float64], y: NDArray[np.float64]
+    ) -> BARTModel:
         """Ajusta un BART clásico con los datos recibidos."""
         seed: int = -1 if self.random_state is None else int(self.random_state)
         sigma_prior, leaf_prior = self._chipman_priors(X, y)
         model: BARTModel = BARTModel()
         model.sample(
-            X_train=X, y_train=y,
-            num_gfr=0, num_burnin=self.num_burnin, num_mcmc=self.num_mcmc,
-            general_params={"random_seed": seed, "num_threads": self.num_threads,
-                            **sigma_prior},
-            mean_forest_params={"num_trees": self.num_trees,
-                                "alpha": self.alpha, "beta": self.beta, **leaf_prior},
+            X_train=X,
+            y_train=y,
+            num_gfr=0,
+            num_burnin=self.num_burnin,
+            num_mcmc=self.num_mcmc,
+            general_params={
+                "random_seed": seed,
+                "num_threads": self.num_threads,
+                **sigma_prior,
+            },
+            mean_forest_params={
+                "num_trees": self.num_trees,
+                "alpha": self.alpha,
+                "beta": self.beta,
+                **leaf_prior,
+            },
         )
         return model
 
     @staticmethod
-    def _draws(model: BARTModel, X: NDArray[np.float64]) -> NDArray[np.float64]:
+    def _draws(
+        model: BARTModel, X: NDArray[np.float64]
+    ) -> NDArray[np.float64]:
         """Matriz (n_filas, num_mcmc) con f*(x) de cada draw posterior."""
         d: Any = model.predict(X, terms="y_hat")
         return np.asarray(d["y_hat"] if isinstance(d, dict) else d)
@@ -272,7 +312,9 @@ class BARTAtrRegressor(RegressorMixin, BaseEstimator):
         """
         X_arr: NDArray[np.float64]
         y_arr: NDArray[np.float64]
-        X_arr, y_arr = validate_data(self, X, y, y_numeric=True, dtype=np.float64)
+        X_arr, y_arr = validate_data(
+            self, X, y, y_numeric=True, dtype=np.float64
+        )
         n: int = len(y_arr)
         z: NDArray[np.float64] = folded_normal_quantiles(n)
 
@@ -285,19 +327,37 @@ class BARTAtrRegressor(RegressorMixin, BaseEstimator):
 
         if self.trim:
             for it in range(1, self.max_iter + 1):
-                resid: NDArray[np.float64] = y_arr - self._draws(model, X_arr).mean(axis=1)
+                resid: NDArray[np.float64] = y_arr - self._draws(
+                    model, X_arr
+                ).mean(axis=1)
                 abs_sorted: NDArray[np.float64] = np.sort(np.abs(resid))
-                sigma2: float = robust_sigma2(abs_sorted, z, self.sigma_frac)     # paso 2
-                p_hat, _ = estimate_p(abs_sorted, z, sigma2, self.Q)              # paso 3
+                sigma2: float = robust_sigma2(
+                    abs_sorted, z, self.sigma_frac
+                )  # paso 2
+                p_hat, _ = estimate_p(abs_sorted, z, sigma2, self.Q)  # paso 3
                 # Salvaguarda (no está en el paper): nunca recortar más de 1 - p_min.
                 p_hat = max(p_hat, self.p_min)
-                k_pos: int = max(1, int(np.floor(n * p_hat)))                     # posición crítica
-                threshold: float = float(abs_sorted[k_pos - 1])                   # su valor = umbral
-                weights = (np.abs(resid) <= threshold).astype(int)                # paso 4, ec. (8)
-                model = self._fit_bart(X_arr[weights == 1], y_arr[weights == 1])
-                history.append({"iter": it, "p_hat": p_hat,
-                                "sigma": float(np.sqrt(sigma2)), "threshold": threshold})
-                if abs(p_hat - p_old) / p_hat < self.tol:                         # paso 5
+                k_pos: int = max(
+                    1, int(np.floor(n * p_hat))
+                )  # posición crítica
+                threshold: float = float(
+                    abs_sorted[k_pos - 1]
+                )  # su valor = umbral
+                weights = (np.abs(resid) <= threshold).astype(
+                    int
+                )  # paso 4, ec. (8)
+                model = self._fit_bart(
+                    X_arr[weights == 1], y_arr[weights == 1]
+                )
+                history.append(
+                    {
+                        "iter": it,
+                        "p_hat": p_hat,
+                        "sigma": float(np.sqrt(sigma2)),
+                        "threshold": threshold,
+                    }
+                )
+                if abs(p_hat - p_old) / p_hat < self.tol:  # paso 5
                     break
                 p_old = p_hat
 
@@ -321,12 +381,17 @@ class BARTAtrRegressor(RegressorMixin, BaseEstimator):
         y_pred : ndarray de forma (n,)
         """
         check_is_fitted(self, "model_")
-        X_arr: NDArray[np.float64] = validate_data(self, X, reset=False, dtype=np.float64)
+        X_arr: NDArray[np.float64] = validate_data(
+            self, X, reset=False, dtype=np.float64
+        )
         return self._draws(self.model_, X_arr).mean(axis=1)
 
-    def predict_interval(self, X: ArrayLike, level: float = 0.95,
-                         kind: Literal["mean", "prediction"] = "prediction"
-                         ) -> NDArray[np.float64]:
+    def predict_interval(
+        self,
+        X: ArrayLike,
+        level: float = 0.95,
+        kind: Literal["mean", "prediction"] = "prediction",
+    ) -> NDArray[np.float64]:
         """Intervalos de credibilidad.
 
         Parameters
@@ -344,10 +409,14 @@ class BARTAtrRegressor(RegressorMixin, BaseEstimator):
             Fila 0: límite inferior. Fila 1: límite superior.
         """
         check_is_fitted(self, "model_")
-        X_arr: NDArray[np.float64] = validate_data(self, X, reset=False, dtype=np.float64)
+        X_arr: NDArray[np.float64] = validate_data(
+            self, X, reset=False, dtype=np.float64
+        )
         draws: NDArray[np.float64] = self._draws(self.model_, X_arr)
         if kind == "prediction":
-            sigma: NDArray[np.float64] = np.sqrt(self.model_.global_var_samples)
+            sigma: NDArray[np.float64] = np.sqrt(
+                self.model_.global_var_samples
+            )
             rng: np.random.Generator = np.random.default_rng(self.random_state)
             draws = draws + rng.normal(size=draws.shape) * sigma[None, :]
         a: float = (1 - level) / 2 * 100

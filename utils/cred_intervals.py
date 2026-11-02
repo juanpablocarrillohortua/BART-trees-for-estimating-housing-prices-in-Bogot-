@@ -246,7 +246,7 @@ def _build_figure(
     level: float,
     figsize: tuple[float, float],
     show: bool,
-    title: str | None = None
+    title: str | None = None,
 ) -> Any:
     """Assemble the density + interval figure and close it."""
     import matplotlib.pyplot as plt
@@ -271,7 +271,9 @@ def _build_figure(
         fig.text(
             0.02,
             0.965,
-            f"Intervalos de credibilidad al {level:.0%}" if title is None else title,
+            f"Intervalos de credibilidad al {level:.0%}"
+            if title is None
+            else title,
             fontsize=18,
             fontweight="bold",
             color=C_DARK,
@@ -313,7 +315,7 @@ def credible_intervals(
     plot: bool = False,
     figsize: tuple[float, float] = (11.0, 6.0),
     show: bool = True,
-    title: str | None = None
+    title: str | None = None,
 ) -> pd.DataFrame:
     """Llama a los cuatro métodos y arma la tabla.
 
@@ -353,7 +355,7 @@ def credible_intervals(
             for key, (low, high) in limites.items()
         ]
         tabla.attrs["fig"] = _build_figure(
-            [(None, dist, rows)], nivel, figsize, show, title = title
+            [(None, dist, rows)], nivel, figsize, show, title=title
         )
 
     return tabla
