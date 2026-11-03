@@ -1,0 +1,30 @@
+# PEP 8 gate: the same `make quality` you run locally (clean, ruff check on
+# scraper/src/utils/notebooks, ruff format --check). Read-only: it never
+# rewrites files. ruff is pinned in requirements/dev.txt.
+name: quality
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"  # ruff.toml targets py313
+          cache: pip
+          cache-dependency-path: requirements/dev.txt
+      - run: make install-dev
+      - run: make quality

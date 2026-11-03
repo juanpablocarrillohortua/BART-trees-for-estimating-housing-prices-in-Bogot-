@@ -47,6 +47,9 @@ One test, one stage, one lint target:
 
 `make quality` runs `clean` first, which deletes `__pycache__`, `.ruff_cache`,
 `.pytest_cache` and `.ipynb_checkpoints` — expect that, it is not a bug.
+CI runs `make quality` on every push to main and every PR
+([.github/workflows/quality.yml](.github/workflows/quality.yml)), with the
+ruff pinned in `requirements/dev.txt`.
 
 ## Scraper architecture
 
