@@ -8,14 +8,12 @@ Requiere:  pip install stochtree scikit-learn numpy scipy pandas
 
 from __future__ import annotations
 
-from typing import Any, Literal, Optional, Sequence
+from typing import Any, Literal, Optional
 
 import numpy as np
-import pandas as pd
 from numpy.typing import ArrayLike, NDArray
 from scipy.stats import chi2, norm
 from sklearn.base import BaseEstimator, RegressorMixin
-from sklearn.pipeline import Pipeline
 from sklearn.utils.validation import check_is_fitted, validate_data
 from stochtree import BARTModel
 
@@ -68,7 +66,7 @@ def estimate_p(
     abs_sorted: NDArray[np.float64],
     z: NDArray[np.float64],
     sigma2: float,
-    Q: float,
+    Q: float,  # noqa: N803 - the paper's name
 ) -> tuple[float, NDArray[np.float64]]:
     """Proporción estimada de datos limpios (ec. 7).
 
@@ -181,7 +179,7 @@ class BARTAtrRegressor(RegressorMixin, BaseEstimator):
 
     def __init__(
         self,
-        Q: float = 1.28,
+        Q: float = 1.28,  # noqa: N803 - the paper's name, public API
         trim: bool = True,
         sigma_frac: float = 0.25,
         p_min: float = 0.5,
@@ -233,12 +231,15 @@ class BARTAtrRegressor(RegressorMixin, BaseEstimator):
         """
         y_std: NDArray[np.float64] = (y - y.mean()) / y.std()
 
-        # sigma^2 ~ nu*lambda / chi2_nu = IG(nu/2, nu*lambda/2), con lambda tal que
-        # P(sigma < sigma_hat) = q y sigma_hat = desviación de los residuos de OLS.
+        # sigma^2 ~ nu*lambda / chi2_nu = IG(nu/2, nu*lambda/2), con lambda
+        # tal que P(sigma < sigma_hat) = q y sigma_hat = desviación de los
+        # residuos de OLS.
         n, p = X.shape
         s2: float
         if n > p + 1:
-            A: NDArray[np.float64] = np.column_stack([np.ones(n), X])
+            A: NDArray[np.float64] = np.column_stack(  # noqa: N806
+                [np.ones(n), X]
+            )
             beta_ols, *_ = np.linalg.lstsq(A, y_std, rcond=None)
             s2 = float(np.sum((y_std - A @ beta_ols) ** 2) / (n - p - 1))
         else:
@@ -294,6 +295,28 @@ class BARTAtrRegressor(RegressorMixin, BaseEstimator):
         d: Any = model.predict(X, terms="y_hat")
         return np.asarray(d["y_hat"] if isinstance(d, dict) else d)
 
+    # --- Serialización ----------------------------------------------------
+    def __getstate__(self) -> dict[str, Any]:
+        """Guarda ``model_`` como el JSON de stochtree.
+
+        Sus bosques viven en objetos de C++ que pickle no puede guardar, así
+        que sin esto fallan ``joblib.dump`` y la validación cruzada que
+        guarda los folds en disco.
+        """
+        # Copia: fuera de sklearn, BaseEstimator devuelve el __dict__ vivo.
+        state: dict[str, Any] = dict(super().__getstate__())
+        if "model_" in state:
+            state["model_"] = state["model_"].to_json()
+        return state
+
+    def __setstate__(self, state: dict[str, Any]) -> None:
+        """Reconstruye ``model_`` desde su JSON."""
+        if isinstance(state.get("model_"), str):
+            model: BARTModel = BARTModel()
+            model.from_json(state["model_"])
+            state["model_"] = model
+        super().__setstate__(state)
+
     # --- API de scikit-learn ----------------------------------------------
     def fit(self, X: ArrayLike, y: ArrayLike) -> BARTAtrRegressor:
         """Ajusta BART(Atr) (o BART(Def) si trim=False).
@@ -335,7 +358,8 @@ class BARTAtrRegressor(RegressorMixin, BaseEstimator):
                     abs_sorted, z, self.sigma_frac
                 )  # paso 2
                 p_hat, _ = estimate_p(abs_sorted, z, sigma2, self.Q)  # paso 3
-                # Salvaguarda (no está en el paper): nunca recortar más de 1 - p_min.
+                # Salvaguarda (no está en el paper): nunca recortar más de
+                # 1 - p_min.
                 p_hat = max(p_hat, self.p_min)
                 k_pos: int = max(
                     1, int(np.floor(n * p_hat))

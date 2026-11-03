@@ -284,6 +284,7 @@ def snap_locality(
             snapped.at[i] = name
     return snapped
 
+
 def add_landmark_distances(
     df_houses: pd.DataFrame,
     df_landmarks: pd.DataFrame,
@@ -306,11 +307,11 @@ def add_landmark_distances(
     houses_coords = df_houses[[lat_col, lon_col]].to_numpy()
 
     def min_haversine_distances(coords_a, coords_b):
-        """Calcula la distancia mínima en km entre cada punto de A y el conjunto B
+        """Distancia mínima en km de cada punto de A al conjunto B.
 
         usando broadcasting de NumPy.
         """
-        R = 6371.0  # Radio de la Tierra en km
+        earth_radius_km = 6371.0
 
         # Convertir a radianes
         lat1, lon1 = np.radians(coords_a[:, 0]), np.radians(coords_a[:, 1])
@@ -328,8 +329,9 @@ def add_landmark_distances(
         )
         c = 2 * np.arctan2(np.sqrt(a), np.sqrt(1 - a))
 
-        # Retorna la distancia mínima (al landmark más cercano) por cada vivienda
-        return np.min(R * c, axis=1)
+        # Retorna la distancia mínima (al landmark más cercano) por cada
+        # vivienda
+        return np.min(earth_radius_km * c, axis=1)
 
     # Crear una copia del DataFrame para no modificar el original directamente
     df_result = df_houses.copy()

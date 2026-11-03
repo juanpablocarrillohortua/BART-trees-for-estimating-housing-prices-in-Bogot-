@@ -499,9 +499,10 @@ pipeline notebooks set does not break it.
 ```python
 from utils.cache import cached
 
+
 @cached(cache_dir=CACHE_DIR, watch=["../utils/preprocessing.py"])
-def fit_report(pipeline, X_train, y_train, X_test):
-    ...
+def fit_report(pipeline, X_train, y_train, X_test): ...
+
 
 relevancia = cached(cache_dir=CACHE_DIR)(analizar_relevancia_caracteristicas)
 ```

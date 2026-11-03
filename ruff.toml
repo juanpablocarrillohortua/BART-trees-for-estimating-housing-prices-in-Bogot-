@@ -38,5 +38,6 @@ docstring-code-format = true
 [lint.pep8-naming]
 ignore-names = [
     "X",
-    "X_with_const"
+    "X_with_const",
+    "X_*",  # X_arr, X_train...: matrices, as X
     ]
