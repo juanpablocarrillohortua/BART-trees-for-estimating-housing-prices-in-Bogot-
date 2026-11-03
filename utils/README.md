@@ -10,6 +10,8 @@ Shared helpers for the analysis. These modules each do one job:
 | [geo.py](geo.py) | coordinate sanity checks, and locality/municipality boxes for the cleaning |
 | [preprocessing.py](preprocessing.py) | the sklearn pieces stock sklearn lacks: frequency encoding, 1-NN imputation, an outlier filter |
 | [map_graph.py](map_graph.py) | the listings drawn on an interactive map |
+| [mutual_inf_plot.py](mutual_inf_plot.py) | `analizar_relevancia_caracteristicas` — features ranked by correlation and mutual information |
+| [cache.py](cache.py) | `cached` — a decorator that keeps a slow cell's result in a `.pkl` until its inputs change |
 
 Notebooks run from `notebooks/`, so they put the repository root on `sys.path`
 before importing:
@@ -476,3 +478,50 @@ leaves blank behind the "Make this Notebook Trusted to load map" text.
 `show_map` passes the same page as a base64 `data:` URI instead, at a fixed
 `height` in pixels. `inline=True` embeds it without any iframe, as a fallback;
 folium's CSS then reaches the rest of the cell output.
+
+## mutual_inf_plot.py
+
+`analizar_relevancia_caracteristicas(df, target)` scores every other column
+against `target`: |Pearson correlation| and mutual information, each scaled to
+0–1 and averaged, then plotted as horizontal bars (`graficar=False` skips the
+plot; `graficar_score_relevancia(df_score)` draws it later). The mutual
+information follows the target: `tipo="auto"` uses `mutual_info_classif` for a
+bool, categorical or object target, or an integer one with at most 20 values, and
+`mutual_info_regression` otherwise — a price is a regression target, not 20k
+classes. Force it with `tipo="clasificacion"` or `tipo="regresion"`. The scaling
+is done by hand, so the global `set_config(transform_output="pandas")` the
+pipeline notebooks set does not break it.
+
+## cache.py
+
+`cached` is a decorator factory for cells too slow to re-run on every pass:
+
+```python
+from utils.cache import cached
+
+@cached(cache_dir=CACHE_DIR, watch=["../utils/preprocessing.py"])
+def fit_report(pipeline, X_train, y_train, X_test):
+    ...
+
+relevancia = cached(cache_dir=CACHE_DIR)(analizar_relevancia_caracteristicas)
+```
+
+The return value goes to `<cache_dir>/<label>_<key>.pkl` (`label` defaults to
+the function name). The key is a `joblib.hash` of the function's source, every
+argument — DataFrames, an unfitted pipeline and its hyperparameters — and the
+bytes of each file in `watch`. Change any of them and the call recomputes;
+revert and the earlier file is found again, since old entries are never
+deleted.
+
+What the key cannot see: edits inside *another* notebook function the cached
+one calls (a scorer, say), which pickle by name only. Pass
+`force_rerun=True` to recompute and overwrite. Cache results, not fitted
+pipelines: a pipeline with MICE's ExtraTrees inside pickles to gigabytes.
+
+`content_hash(*objs)` is the same content-based hash on its own, for naming
+anything that should follow the inputs. `BART_Trees.ipynb` uses it for the
+fitted CV folds: `cross_validate_model_cached(..., return_estimator=True)` saves
+each fold's pipeline to `cv_cache/cv_folds/<hash>/fold_<i>.joblib` from inside
+its worker and returns the paths, not the objects. A fitted pipeline is
+~2.6 GB, so the five of them never sit in memory at once; load one with
+`load_fold_estimator(cv_results, i)`, then `del` it and `gc.collect()`.

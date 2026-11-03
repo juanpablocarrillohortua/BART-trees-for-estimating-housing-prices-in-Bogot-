@@ -174,6 +174,10 @@ holds the sklearn pieces that `notebooks/BART_Trees.ipynb` assembles into one
 pipeline (imputation → outlier filter → encoding → amenities → model):
 `OutlierFilterRegressor` drops rows only while fitting, by wrapping the
 downstream steps, because an sklearn transformer cannot drop rows.
+[utils/cache.py](utils/cache.py) holds `cached`, the decorator that keeps a
+slow cell's result in `cv_cache/*.pkl` (gitignored) keyed on its source, its
+arguments and the `watch`ed modules; it caches results, never fitted
+pipelines, which pickle to gigabytes because of MICE's ExtraTrees.
 [utils/README.md](utils/README.md) documents them.
 
 Notebooks run from `notebooks/`, so they prepend the parent directory to

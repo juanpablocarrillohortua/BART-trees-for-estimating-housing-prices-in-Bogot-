@@ -17,6 +17,15 @@ positive_landmarks:
   "Parque de la 93":
     latitude: 4.6768
     longitude: -74.0482
+  "Centro Comercial Santafé":
+    latitude: 4.7622
+    longitude: -74.0464
+  "Al Agua Patos (Calle 104)":
+    latitude: 4.6905
+    longitude: -74.0506
+  "McDonald's Calle 127":
+    latitude: 4.7055
+    longitude: -74.0532
   "Zona G / Quinta Camacho":
     latitude: 4.6534
     longitude: -74.0551
@@ -149,10 +158,38 @@ positive_landmarks:
   "Centro Poblado San Juan de Sumapaz":
     latitude: 4.0250
     longitude: -74.3120
+  # Chía
+  "Centro Comercial Fontanar":
+    latitude: 4.8841
+    longitude: -74.0351
+  "Parque Santander (Parque Principal de Chía)":
+    latitude: 4.8613
+    longitude: -74.0602
+  # Cajicá
+  "Parque Principal de Cajicá":
+    latitude: 4.9173
+    longitude: -74.0255
+  "Estación del Tren de Cajicá / Parque La Estación":
+    latitude: 4.9167
+    longitude: -74.0231
+  # Zipaquirá
+  "Catedral de Sal de Zipaquirá":
+    latitude: 5.0187
+    longitude: -74.0103
+  "Centro Comercial Megacity":
+    latitude: 5.0263
+    longitude: -73.9920
+  # Soacha
+  "Centro Comercial Unisur":
+    latitude: 4.5843
+    longitude: -74.2062
+  "Jardín Centro Comercial (Ciudad Verde)":
+    latitude: 4.6059
+    longitude: -74.2229
 
 negative_landmarks:
-  "Intersección Autopista Norte con Calle 170":
-    latitude: 4.7551
+  "Cementerio Jardines del Recuerdo":
+    latitude: 4.7863
     longitude: -74.0462
   "Canteras y Zonas de Extracción El Codito":
     latitude: 4.7490
@@ -163,12 +200,12 @@ negative_landmarks:
   "Franja de Inestabilidad Calle 163 Este":
     latitude: 4.7410
     longitude: -74.0210
-  "Intersección Av. Caracas con Calle 57":
-    latitude: 4.6441
-    longitude: -74.0645
-  "Intercambiador Calle 72 con Caracas":
-    latitude: 4.6582
-    longitude: -74.0601
+  "Cementerio Central":
+    latitude: 4.6174
+    longitude: -74.0759
+  "Cárcel Distrital de Bogotá":
+    latitude: 4.5860
+    longitude: -74.0852
   "Sector Quebrada La Vieja - Borde Este":
     latitude: 4.6490
     longitude: -74.0460
@@ -199,39 +236,39 @@ negative_landmarks:
   "Sector Monteblanco (Inestabilidad de Ladera)":
     latitude: 4.5080
     longitude: -74.1190
-  "TransMilenio Portal del Tunal":
-    latitude: 4.5684
-    longitude: -74.1378
+  "Centro de Reclusión Juvenil El Redentor":
+    latitude: 4.5768
+    longitude: -74.1451
   "Sector Curtimbres San Benito":
     latitude: 4.5820
     longitude: -74.1410
-  "TransMilenio Portal del Sur":
-    latitude: 4.5980
-    longitude: -74.1670
+  "Cementerio del Sur":
+    latitude: 4.5900
+    longitude: -74.1179
   "Ronda del Río Tunjuelo (Bosa San José)":
     latitude: 4.6120
     longitude: -74.1980
   "Corabastos (Central Mayorista)":
     latitude: 4.6300
     longitude: -74.1560
-  "TransMilenio Portal Américas":
-    latitude: 4.6280
-    longitude: -74.1610
+  "PTAR Cañaveralejo (Planta de Aguas Residuales)":
+    latitude: 4.6452
+    longitude: -74.1980
   "Aeropuerto Internacional El Dorado (Cono de Ruido)":
     latitude: 4.7010
     longitude: -74.1460
   "Zona Industrial HB / Cofradía":
     latitude: 4.6780
     longitude: -74.1380
-  "TransMilenio Portal de la 80":
-    latitude: 4.7100
-    longitude: -74.1110
+  "PTAR El Salitre (Planta de Aguas Residuales)":
+    latitude: 4.7320
+    longitude: -74.1224
   "Humedal Jaboque (Tercio Bajo con Vertimientos)":
     latitude: 4.7180
     longitude: -74.1320
-  "TransMilenio Portal Suba":
-    latitude: 4.7441
-    longitude: -74.0924
+  "Complejo Penitenciario La Picota":
+    latitude: 4.5492
+    longitude: -74.1177
   "Planta Concretera Torca (Calle 240)":
     latitude: 4.8012
     longitude: -74.0321
@@ -301,3 +338,34 @@ negative_landmarks:
   "Punto de Inestabilidad Vial Vereda Nazareth":
     latitude: 4.1820
     longitude: -74.2150
+  # Chía
+  "PTAR Chía (Planta de Aguas Residuales)":
+    latitude: 4.8610
+    longitude: -74.0392
+  "Cementerio de Chía":
+    latitude: 4.8656
+    longitude: -74.0623
+  # Cajicá
+  "Cementerio de Cajicá":
+    latitude: 4.9224
+    longitude: -74.0362
+  "Planta Industrial Groupe SEB (Cajicá)":
+    latitude: 4.9322
+    longitude: -74.0226
+  # Zipaquirá
+  "Establecimiento Penitenciario de Zipaquirá (EPMSC)":
+    latitude: 5.0252
+    longitude: -74.0027
+  "Cementerio Municipal de Zipaquirá":
+    latitude: 5.0334
+    longitude: -74.0051
+  # Soacha
+  "Escombrera Municipal de Soacha":
+    latitude: 4.5572
+    longitude: -74.2190
+  "Cementerio de Soacha":
+    latitude: 4.5855
+    longitude: -74.2224
+  "Altos de Cazucá":
+    latitude: 4.5789
+    longitude: -74.1853

@@ -1,9 +1,11 @@
 """
-Análisis de relevancia de variables predictoras frente a un target binario.
+Análisis de relevancia de variables predictoras frente a un target binario
+o continuo.
 
 Combina dos métricas:
   - Correlación (valor absoluto) con el target.
-  - Información mutua (mutual_info_classif).
+  - Información mutua (mutual_info_classif para un target categórico,
+    mutual_info_regression para uno continuo).
 
 Ambas se normalizan con MinMax y se promedian para obtener un score 0–1.
 
@@ -19,10 +21,15 @@ import pandas as pd
 import seaborn as sns
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
-from sklearn.feature_selection import mutual_info_classif
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.feature_selection import (
+    mutual_info_classif,
+    mutual_info_regression,
+)
 
 SUBTITULO = "Promedio normalizado (MinMax) de Correlación e Información Mutua"
+
+#: Hasta cuántos valores distintos un target entero se trata como clases.
+MAX_CLASES = 20
 
 
 # --------------------------------------------------------------------------- #
@@ -62,11 +69,31 @@ def _preparar(
 
 
 def _escalar(serie: pd.Series) -> pd.Series:
-    """Escala una serie al rango [0, 1] conservando el índice."""
-    valores = (
-        MinMaxScaler().fit_transform(serie.to_numpy().reshape(-1, 1)).ravel()
-    )
-    return pd.Series(valores, index=serie.index)
+    """Escala una serie al rango [0, 1] conservando el índice.
+
+    A mano y no con ``MinMaxScaler``: con
+    ``set_config(transform_output="pandas")`` el escalador devuelve un
+    DataFrame. Una serie constante queda en 0.
+    """
+    rango = serie.max() - serie.min()
+    if rango == 0:
+        return pd.Series(0.0, index=serie.index)
+    return (serie - serie.min()) / rango
+
+
+def _es_clasificacion(y: pd.Series, tipo: str) -> bool:
+    """Decide si la información mutua se calcula como clasificación."""
+    if tipo == "clasificacion":
+        return True
+    if tipo == "regresion":
+        return False
+    if tipo != "auto":
+        raise ValueError(
+            "`tipo` debe ser 'auto', 'clasificacion' o 'regresion'."
+        )
+    if not pd.api.types.is_numeric_dtype(y) or pd.api.types.is_bool_dtype(y):
+        return True
+    return pd.api.types.is_integer_dtype(y) and y.nunique() <= MAX_CLASES
 
 
 # --------------------------------------------------------------------------- #
@@ -78,9 +105,16 @@ def calcular_informacion_mutua(
     predictoras: Optional[Iterable[str]] = None,
     discretas: bool | Sequence[bool] = False,
     random_state: int = 42,
+    tipo: str = "auto",
 ) -> pd.Series:
     """
     Información mutua entre cada predictora y el target.
+
+    Parameters
+    ----------
+    tipo : 'auto', 'clasificacion' o 'regresion'. 'auto' usa clasificación
+        si el target es booleano, categórico o entero con pocos valores
+        (``MAX_CLASES``), y regresión en otro caso.
 
     Returns
     -------
@@ -88,7 +122,12 @@ def calcular_informacion_mutua(
     """
     X, y, predictoras = _preparar(df, target, predictoras)  # noqa: N806
 
-    scores = mutual_info_classif(
+    mutual_info = (
+        mutual_info_classif
+        if _es_clasificacion(y, tipo)
+        else mutual_info_regression
+    )
+    scores = mutual_info(
         X.to_numpy(),
         y,
         discrete_features=discretas,
@@ -118,6 +157,7 @@ def calcular_score_relevancia(
     predictoras: Optional[Iterable[str]] = None,
     pesos: Tuple[float, float] = (0.5, 0.5),
     random_state: int = 42,
+    tipo: str = "auto",
 ) -> pd.DataFrame:
     """
     Score combinado = promedio ponderado de |correlación| y MI, ambas
@@ -126,6 +166,7 @@ def calcular_score_relevancia(
     Parameters
     ----------
     pesos : (peso_correlacion, peso_mi). Se normalizan para sumar 1.
+    tipo : tipo de información mutua; ver ``calcular_informacion_mutua``.
 
     Returns
     -------
@@ -137,7 +178,7 @@ def calcular_score_relevancia(
 
     corr = calcular_correlacion(df, target, predictoras)
     mi = calcular_informacion_mutua(
-        df, target, predictoras, random_state=random_state
+        df, target, predictoras, random_state=random_state, tipo=tipo
     ).reindex(predictoras)
 
     if sum(pesos) == 0:
@@ -229,6 +270,7 @@ def analizar_relevancia_caracteristicas(
     top_n: Optional[int] = None,
     graficar: bool = True,
     random_state: int = 42,
+    tipo: str = "auto",
 ) -> pd.DataFrame:
     """Calcula el score de relevancia y opcionalmente lo grafica."""
     df_score = calcular_score_relevancia(
@@ -237,6 +279,7 @@ def analizar_relevancia_caracteristicas(
         predictoras=predictoras,
         pesos=pesos,
         random_state=random_state,
+        tipo=tipo,
     )
 
     if graficar:
