@@ -153,11 +153,23 @@ class BARTAtrRegressor(RegressorMixin, BaseEstimator):
     num_burnin : int, default=500
         Iteraciones iniciales de cada cadena que se descartan.
     num_mcmc : int, default=1000
-        Draws posteriores que se guardan (kappa). Se promedian para predecir
-        y se usan para los intervalos.
+        Draws posteriores que se guardan (kappa) por cadena. Se promedian
+        para predecir y se usan para los intervalos.
+    num_chains : int, default=2
+        Cadenas MCMC del ajuste final, cada una con su propio burn-in. Con 2
+        o más se puede calcular R-hat. Los reajustes intermedios del recorte
+        usan una sola cadena: solo aportan residuos.
     num_threads : int, default=1
         Hilos de CPU por cada ajuste de BART. Déjalo en 1 si la validación
         cruzada ya corre en paralelo (n_jobs=-1).
+    num_gfr : int, default=0
+        Iteraciones de arranque con grow-from-root (XBART). Con 0 es el BART
+        clásico del paper. Si es mayor que 0 debe ser >= num_chains: cada
+        cadena arranca de un bosque GFR distinto.
+    keep_every : int, default=1
+        Adelgazamiento: conserva 1 de cada keep_every iteraciones tras el
+        burn-in. num_mcmc sigue siendo el número de draws conservados, así
+        que el tiempo de cada cadena crece en ese factor.
     random_state : int or None, default=None
         Semilla para que los resultados sean reproducibles.
 
@@ -193,7 +205,10 @@ class BARTAtrRegressor(RegressorMixin, BaseEstimator):
         q: float = 0.9,
         num_burnin: int = 500,
         num_mcmc: int = 1000,
+        num_chains: int = 2,
         num_threads: int = 1,
+        num_gfr: int = 0,
+        keep_every: int = 1,
         random_state: Optional[int] = None,
     ) -> None:
         self.Q = Q
@@ -210,7 +225,10 @@ class BARTAtrRegressor(RegressorMixin, BaseEstimator):
         self.q = q
         self.num_burnin = num_burnin
         self.num_mcmc = num_mcmc
+        self.num_chains = num_chains
         self.num_threads = num_threads
+        self.num_gfr = num_gfr
+        self.keep_every = keep_every
         self.random_state = random_state
 
     # --- Priors de Chipman et al. (2010) --------------------------------
@@ -259,9 +277,12 @@ class BARTAtrRegressor(RegressorMixin, BaseEstimator):
             {"sigma2_leaf_init": sigma_mu**2, "sample_sigma2_leaf": False},
         )  # fijo, como en Chipman
 
-    # --- BART individual (una cadena MCMC completa) -----------------------
+    # --- BART individual (cadenas MCMC completas) -------------------------
     def _fit_bart(
-        self, X: NDArray[np.float64], y: NDArray[np.float64]
+        self,
+        X: NDArray[np.float64],
+        y: NDArray[np.float64],
+        num_chains: int = 1,
     ) -> BARTModel:
         """Ajusta un BART clásico con los datos recibidos."""
         seed: int = -1 if self.random_state is None else int(self.random_state)
@@ -270,11 +291,13 @@ class BARTAtrRegressor(RegressorMixin, BaseEstimator):
         model.sample(
             X_train=X,
             y_train=y,
-            num_gfr=0,
+            num_gfr=self.num_gfr,
             num_burnin=self.num_burnin,
             num_mcmc=self.num_mcmc,
             general_params={
                 "random_seed": seed,
+                "num_chains": num_chains,
+                "keep_every": self.keep_every,
                 "num_threads": self.num_threads,
                 **sigma_prior,
             },
@@ -291,7 +314,7 @@ class BARTAtrRegressor(RegressorMixin, BaseEstimator):
     def _draws(
         model: BARTModel, X: NDArray[np.float64]
     ) -> NDArray[np.float64]:
-        """Matriz (n_filas, num_mcmc) con f*(x) de cada draw posterior."""
+        """Matriz (n_filas, cadenas * num_mcmc) con f*(x) de cada draw."""
         d: Any = model.predict(X, terms="y_hat")
         return np.asarray(d["y_hat"] if isinstance(d, dict) else d)
 
@@ -333,6 +356,13 @@ class BARTAtrRegressor(RegressorMixin, BaseEstimator):
         self : BARTAtrRegressor
             El estimador ajustado.
         """
+        # stochtree lo exige en el ajuste final; mejor fallar antes del
+        # recorte que tras varios minutos de reajustes.
+        if 0 < self.num_gfr < self.num_chains:
+            raise ValueError(
+                "num_gfr debe ser 0 o >= num_chains: cada cadena arranca de "
+                "un draw GFR distinto."
+            )
         X_arr: NDArray[np.float64]
         y_arr: NDArray[np.float64]
         X_arr, y_arr = validate_data(
@@ -341,8 +371,14 @@ class BARTAtrRegressor(RegressorMixin, BaseEstimator):
         n: int = len(y_arr)
         z: NDArray[np.float64] = folded_normal_quantiles(n)
 
+        # Solo el ajuste final lleva num_chains cadenas. Con recorte, el
+        # inicial nunca es el final: el bucle reajusta al menos una vez.
+        initial_is_final: bool = not self.trim or self.max_iter < 1
+
         # Paso 1: BART inicial con todos los datos
-        model: BARTModel = self._fit_bart(X_arr, y_arr)
+        model: BARTModel = self._fit_bart(
+            X_arr, y_arr, self.num_chains if initial_is_final else 1
+        )
         weights: NDArray[np.int64] = np.ones(n, dtype=int)
         history: list[dict[str, float]] = []
         p_old: float = 0.5
@@ -370,8 +406,16 @@ class BARTAtrRegressor(RegressorMixin, BaseEstimator):
                 weights = (np.abs(resid) <= threshold).astype(
                     int
                 )  # paso 4, ec. (8)
+
+                # El criterio de parada (paso 5).
+                final: bool = (
+                    abs(p_hat - p_old) / p_hat < self.tol
+                    or it == self.max_iter
+                )
                 model = self._fit_bart(
-                    X_arr[weights == 1], y_arr[weights == 1]
+                    X_arr[weights == 1],
+                    y_arr[weights == 1],
+                    self.num_chains if final else 1,
                 )
                 history.append(
                     {
@@ -381,7 +425,7 @@ class BARTAtrRegressor(RegressorMixin, BaseEstimator):
                         "threshold": threshold,
                     }
                 )
-                if abs(p_hat - p_old) / p_hat < self.tol:  # paso 5
+                if final:  # paso 5
                     break
                 p_old = p_hat
 
@@ -409,6 +453,26 @@ class BARTAtrRegressor(RegressorMixin, BaseEstimator):
             self, X, reset=False, dtype=np.float64
         )
         return self._draws(self.model_, X_arr).mean(axis=1)
+
+    def posterior_draws(self, X: ArrayLike) -> NDArray[np.float64]:
+        """Draws posteriores de f(x) separados por cadena.
+
+        Parameters
+        ----------
+        X : array-like de forma (n, p)
+
+        Returns
+        -------
+        draws : ndarray de forma (cadenas, num_mcmc, n)
+            El orden (chain, draw, ...) que espera arviz.
+        """
+        check_is_fitted(self, "model_")
+        X_arr: NDArray[np.float64] = validate_data(
+            self, X, reset=False, dtype=np.float64
+        )
+        draws: NDArray[np.float64] = self._draws(self.model_, X_arr)
+        n_chains: int = self.model_.num_chains
+        return draws.T.reshape(n_chains, -1, len(X_arr))
 
     def predict_interval(
         self,
