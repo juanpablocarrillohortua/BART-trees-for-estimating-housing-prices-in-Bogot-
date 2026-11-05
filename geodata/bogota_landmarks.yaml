@@ -186,6 +186,25 @@ positive_landmarks:
   "Jardín Centro Comercial (Ciudad Verde)":
     latitude: 4.6059
     longitude: -74.2229
+  # Cobertura de zonas sin landmarks cercanos (coordenadas OpenStreetMap)
+  "Country Club de Bogotá":
+    latitude: 4.7123
+    longitude: -74.0418
+  "Club El Nogal":
+    latitude: 4.6601
+    longitude: -74.0507
+  "Parque Nacional Enrique Olaya Herrera":
+    latitude: 4.6240
+    longitude: -74.0640
+  "Club Los Lagartos":
+    latitude: 4.7023
+    longitude: -74.0827
+  "Centro Comercial Hayuelos":
+    latitude: 4.6638
+    longitude: -74.1304
+  "Parque Metropolitano Timiza":
+    latitude: 4.6101
+    longitude: -74.1539
 
 negative_landmarks:
   "Cementerio Jardines del Recuerdo":
@@ -369,3 +388,10 @@ negative_landmarks:
   "Altos de Cazucá":
     latitude: 4.5789
     longitude: -74.1853
+  # Centro: focos de deterioro urbano
+  "Antiguo Bronx (Voto Nacional)":
+    latitude: 4.6033
+    longitude: -74.0838
+  "Barrio Santa Fe (Zona de Tolerancia)":
+    latitude: 4.6159
+    longitude: -74.0773
