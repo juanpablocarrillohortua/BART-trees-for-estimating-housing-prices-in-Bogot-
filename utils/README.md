@@ -12,6 +12,8 @@ Shared helpers for the analysis. These modules each do one job:
 | [map_graph.py](map_graph.py) | the listings drawn on an interactive map |
 | [mutual_inf_plot.py](mutual_inf_plot.py) | `analizar_relevancia_caracteristicas` — features ranked by correlation and mutual information |
 | [cache.py](cache.py) | `cached` — a decorator that keeps a slow cell's result in a `.pkl` until its inputs change |
+| [shap_explanaitor.py](shap_explanaitor.py) | `shap_report` — SHAP bar, beeswarm and waterfall plots for a model or a CV fold |
+| [mcmc_traceplot.py](mcmc_traceplot.py) | `traceplot` — density and trace per chain of σ² and f(x) for a BART or a BART CV fold |
 
 Notebooks run from `notebooks/`, so they put the repository root on `sys.path`
 before importing:
@@ -526,3 +528,69 @@ each fold's pipeline to `cv_cache/cv_folds/<hash>/fold_<i>.joblib` from inside
 its worker and returns the paths, not the objects. A fitted pipeline is
 ~2.6 GB, so the five of them never sit in memory at once; load one with
 `load_fold_estimator(cv_results, i)`, then `del` it and `gc.collect()`.
+
+## shap_explanaitor.py
+
+`shap_report(source, X)` explains a model with SHAP and draws the bar,
+beeswarm and waterfall plots, with Spanish titles. `source` is any of:
+
+| `source` | What is explained |
+|---|---|
+| A CV result from `cross_validate_model_cached` | Fold `fold` (the last by default) is loaded from disk; `n_explain` of its test rows are explained against `n_background` of its training rows, so the explanation is out of sample. Pass the same `X` that was cross-validated. |
+| A fitted pipeline of the project's shape | `X` is raw rows; they go through the pipeline's imputation, encoding and selection first. |
+| Any other fitted regressor | `X` is already its feature matrix. |
+
+The values are on the scale the model was fitted on — log(price) for the
+project's pipelines, which fit inside a `TransformedTargetRegressor` — where
+they add up exactly to the prediction.
+
+Tree models shap knows (sklearn forests, XGBoost, LightGBM) get the exact
+`TreeExplainer`. `BARTAtrRegressor` does not, so it falls back to the
+permutation explainer, with a warning stating the cost: about
+`n_explain × (2·features + 1) × n_background` predicted rows, each running
+every posterior draw. Start small. The computation and the figures are split,
+so cache the slow half and redraw freely:
+
+```python
+from utils.shap_explanaitor import compute_shap, plot_shap
+
+shap_bart = cached(cache_dir=CACHE_DIR)(compute_shap)(
+    cv_classic_bart_results, X_train, n_explain=100, n_background=50
+)
+figs = plot_shap(shap_bart["explanation"], row=0)
+```
+
+`row` picks the observation the waterfall plot breaks down.
+
+## mcmc_traceplot.py
+
+`traceplot(source, X)` draws the posterior chains of a `BARTAtrRegressor`:
+one row for σ², then one row of f(x) for each of `n_rows` random listings
+(3 by default). In each row, each chain's density is on the left and its
+trace on the right. The row title gives R̂ and bulk ESS, computed by arviz
+on every draw, and turns orange when R̂ > 1.01, the threshold
+`mcmc_diagnostics` uses. `source` is any of:
+
+| `source` | Where the chains come from |
+|---|---|
+| A CV result from `cross_validate_model_cached` | Fold `fold` (the last by default) is loaded from disk, `n_rows` of its test rows are traced, and the pipeline is freed before plotting. Pass the same `X` that was cross-validated. |
+| A fitted pipeline of the project's shape | `X` is raw rows; they go through the pipeline's imputation, encoding and selection first. |
+| A fitted `BARTAtrRegressor` | `X` is already its feature matrix. |
+
+Anything without `posterior_draws` (a forest, XGBoost, LightGBM) raises
+`TypeError`: those models have no chains. f(x) is on the scale the model was
+fitted on, log(price) for the project's pipelines.
+
+A trace draws at most `max_points` draws per chain (every k-th beyond it);
+the densities and R̂/ESS always use every draw. Loading a fold is the slow
+part, so cache `extract_chains` and redraw with `plot_trace`:
+
+```python
+from utils.mcmc_traceplot import extract_chains, plot_trace
+
+traza = cached(cache_dir=CACHE_DIR)(extract_chains)(
+    cv_classic_bart_results, X_train, n_rows=3
+)
+fig = plot_trace(traza)
+traza["diagnostics"]  # rhat, ess_bulk per traced quantity
+```
