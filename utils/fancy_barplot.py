@@ -34,14 +34,16 @@ def _colors(n: int, palette=None):
     )
 
 
-def _bar_labels(ax, container, counts, pcts, labels: Labels, fontsize=11):
+def _bar_labels(
+    ax, container, counts, pcts, labels: Labels, fontsize=11, sep="\n"
+):
     """Anota una serie de barras con conteos y/o porcentajes."""
     if labels == "none":
         return
     tpl = {
         "count": "{c:,.0f}",
         "pct": "{p:.1f}%",
-        "both": "{c:,.0f}\n({p:.1f}%)",
+        "both": "{c:,.0f}" + sep + "({p:.1f}%)",
     }[labels]
     txt = [
         "" if c == 0 else tpl.format(c=c, p=p) for c, p in zip(counts, pcts)
@@ -56,7 +58,7 @@ def _bar_labels(ax, container, counts, pcts, labels: Labels, fontsize=11):
     )
 
 
-def _style(ax, title, xlabel, ylabel, pct, rot, headroom):
+def _style(ax, title, xlabel, ylabel, pct, rot, headroom, value_axis="y"):
     """Aplica el estilo visual compartido por todos los gráficos."""
     ax.set_facecolor("white")
     ax.set_title(
@@ -64,7 +66,7 @@ def _style(ax, title, xlabel, ylabel, pct, rot, headroom):
     )
     ax.set_xlabel(xlabel, fontsize=12, color=TXT, labelpad=12)
     ax.set_ylabel(ylabel, fontsize=12, color=TXT, labelpad=12)
-    ax.yaxis.set_major_formatter(
+    getattr(ax, f"{value_axis}axis").set_major_formatter(
         mtick.PercentFormatter(decimals=0)
         if pct
         else mtick.FuncFormatter(
@@ -76,9 +78,11 @@ def _style(ax, title, xlabel, ylabel, pct, rot, headroom):
     if rot:
         plt.setp(ax.get_xticklabels(), ha="right", rotation_mode="anchor")
     ax.set_axisbelow(True)
-    ax.yaxis.grid(True, linestyle="--", color=GRID, linewidth=1.0)
-    ax.xaxis.grid(False)
-    ax.margins(y=headroom)
+    ax.grid(False)
+    getattr(ax, f"{value_axis}axis").grid(
+        True, linestyle="--", color=GRID, linewidth=1.0
+    )
+    ax.margins(**{value_axis: headroom})
     sns.despine(ax=ax, left=True, bottom=True)
     plt.tight_layout()
 
@@ -95,6 +99,7 @@ def fancy_bars(
     figsize: tuple[float, float] = (9, 7),
     rot: float = 0,
     top: int | None = None,
+    orientation: Literal["auto", "v", "h"] = "auto",
 ) -> plt.Axes:
     """Distribución de una variable categórica.
 
@@ -103,6 +108,8 @@ def fancy_bars(
     order   : orden de las categorías (default: de mayor a menor)
     palette : nombre de paleta seaborn o lista de colores
     top     : mostrar solo las N categorías más frecuentes
+    orientation : "v" barras verticales (como antes) | "h" barras
+                  horizontales | "auto" según cuántas categorías haya
     """
     if labels not in {"none", "count", "pct", "both"}:
         raise ValueError("labels debe ser: 'none', 'count', 'pct' o 'both'")
@@ -116,27 +123,41 @@ def fancy_bars(
     cats = vc.index.astype(str)
     pcts = vc / vc.sum() * 100
 
+    if orientation == "auto":
+        orientation = "h" if len(vc) > 8 else "v"
+    horizontal = orientation == "h"
+
     if ax is None:
         _, ax = plt.subplots(figsize=figsize)
     colors = _colors(len(vc), palette)
+    vals = (pcts if pct else vc).values
     sns.barplot(
-        x=cats,
-        y=(pcts if pct else vc).values,
+        x=vals if horizontal else cats,
+        y=cats if horizontal else vals,
+        orient=orientation,
         color=colors[0],
         width=0.62,
         ax=ax,
     )
     for patch, color in zip(ax.containers[0], colors):
         patch.set_facecolor(color)
-    _bar_labels(ax, ax.containers[0], vc.values, pcts.values, labels)
+    _bar_labels(
+        ax,
+        ax.containers[0],
+        vc.values,
+        pcts.values,
+        labels,
+        sep=" " if horizontal else "\n",
+    )
     _style(
         ax,
         title or f"Distribución de {_pretty(x)}",
-        _pretty(x),
-        YLAB[pct],
+        YLAB[pct] if horizontal else _pretty(x),
+        _pretty(x) if horizontal else YLAB[pct],
         pct,
         rot,
         0.14 if labels != "none" else 0.05,
+        "x" if horizontal else "y",
     )
     return ax
 
