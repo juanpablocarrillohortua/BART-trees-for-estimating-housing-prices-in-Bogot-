@@ -181,6 +181,14 @@ downstream steps, because an sklearn transformer cannot drop rows.
 slow cell's result in `cv_cache/*.pkl` (gitignored) keyed on its source, its
 arguments and the `watch`ed modules; it caches results, never fitted
 pipelines, which pickle to gigabytes because of MICE's ExtraTrees.
+[utils/shap_explanaitor.py](utils/shap_explanaitor.py) holds `shap_report`
+(bar, beeswarm, waterfall) for a fitted model or one fold of a CV
+result, on the log-price scale; BART has no tree explainer in shap, so it
+falls back to the slow permutation one.
+[utils/mcmc_traceplot.py](utils/mcmc_traceplot.py) holds `traceplot`
+(density and trace per chain of σ² and f(x), with arviz R̂/ESS) for a
+`BARTAtrRegressor` or one fold of a BART CV result; it raises on models
+without `posterior_draws`.
 [utils/README.md](utils/README.md) documents them.
 
 Notebooks run from `notebooks/`, so they prepend the parent directory to

@@ -2,258 +2,318 @@
   <img src="https://pattern-lab-externado-prod.web.app/images/logo-uec.svg" alt="Banner del proyecto" width="40%">
 </div>
 
-# proyecto_finca_raiz_colombia
+# Hacia un sistema de valuación masiva con BART para la vivienda de Bogotá y alrededores
 
-Analysis of the Bogotá residential property market, using listing data
-collected from [FincaRaíz](https://www.fincaraiz.com.co).
 
-Universidad Externado de Colombia — cuarto semestre.
+![Python](https://img.shields.io/badge/Python-3776AB.svg?style=for-the-badge&logo=python&logoColor=white)
+![Pandas](https://img.shields.io/badge/Pandas-150458.svg?style=for-the-badge&logo=pandas&logoColor=white)
+![NumPy](https://img.shields.io/badge/NumPy-013243.svg?style=for-the-badge&logo=numpy&logoColor=white)
+![SciPy](https://img.shields.io/badge/SciPy-8CAAE6.svg?style=for-the-badge&logo=scipy&logoColor=white)
+![scikit-learn](https://img.shields.io/badge/scikit--learn-F7931E.svg?style=for-the-badge&logo=scikitlearn&logoColor=white)
+![stochtree](https://img.shields.io/badge/stochtree-2E7D32.svg?style=for-the-badge)
+![XGBoost](https://img.shields.io/badge/XGBoost-189FDD.svg?style=for-the-badge)
+![LightGBM](https://img.shields.io/badge/LightGBM-02569B.svg?style=for-the-badge)
+![SHAP](https://img.shields.io/badge/SHAP-FF0D57.svg?style=for-the-badge)
+![ArviZ](https://img.shields.io/badge/ArviZ-0F4C81.svg?style=for-the-badge)
+![Matplotlib](https://img.shields.io/badge/Matplotlib-11557C.svg?style=for-the-badge)
+![Seaborn](https://img.shields.io/badge/Seaborn-4C72B0.svg?style=for-the-badge)
+![Jupyter](https://img.shields.io/badge/Jupyter-F37626.svg?style=for-the-badge&logo=jupyter&logoColor=white)
 
-## Status
+## Abstract
+In Colombia, access to official data on actual housing sale prices is limited, and when available, it is usually unreliable due to phenomena such as tax underreporting. Within this framework, a prototype Mass Appraisal System (MAS) is proposed for used housing in Bogotá, Soacha, Chía and Zipaquirá, using asking prices collected through *web scraping* from the FincaRaíz portal. The main model is BART(Atr), an adaptation of BART with adaptive outlier trimming proposed by Cao et al. (2024), which is compared through cross-validation against OLS, Random Forest, XGBoost, LightGBM and a median predictor. On the test set, BART(Atr) achieved a MAPE of 16.8 %, an $R^2$ of 0.809 and 70.8 % of predictions within ±20 %, widely outperforming the results reported by Lozano-Gracia and Anselin (2012) for Bogotá and approaching XGBoost, which was the best model. However, the MCMC chains did not converge ($\hat{R} \approx 1.43$), which invalidates the credible intervals for both the predictions and the SHAP values. Finally, the SHAP analysis shows that built area and socioeconomic stratum are the variables most strongly associated with price, followed by geographic features such as distance to *landmarks*.
 
-| Part | State |
-|---|---|
-| Data acquisition ([scraper/](scraper/)) | **Working.** Full venta run: 31,252 listings at 91.3% coverage |
-| Cleaning / validation | **Working.** Runs inside the scraper pipeline (stages 4–6) |
-| Shared helpers ([utils/](utils/)) | **In progress.** Plotting toolkit, normality panel, geo checks, map |
-| Exploratory analysis ([notebooks/](notebooks/)) | **In progress.** Univariate pass and data-quality audit |
-| Bayesian models ([src/](src/)) | Not started |
+**Keywords:** Bayesian statistics; BART; adaptive trimming; mass appraisal; asking prices; explainable artificial intelligence (XAI); SHAP values; MCMC; Bogotá.
 
-## Quick start
+## Resumen
 
-```bash
-python -m venv .venv
-.venv\Scripts\activate          # Windows;  source .venv/bin/activate elsewhere
+En Colombia no existe la facilidad para acceder a datos oficiales sobre precios reales de venta de vivienda, y cuando existe, este acceso suele ser poco confiable debido a la subdeclaración fiscal. Bajo este marco, se plantea un prototipo de Sistema de Valuación Masiva (MAS) para la vivienda usada en Bogotá, Soacha, Chía y Zipaquirá, utilizando precios pedidos recolectados mediante *web scraping* del portal FincaRaíz. Como modelo principal se implementa BART(Atr), una adaptación de BART con recorte adaptativo de atípicos propuesta por Cao et al. (2024), el cual se compara mediante validación cruzada contra OLS, Random Forest, XGBoost, LightGBM y un predictor de la mediana. En el conjunto de prueba BART(Atr) obtuvo un MAPE de 16,8 %, un $R^2$ de 0,809 y un 70,8 % de predicciones dentro del ±20 %, superando con creces lo reportado por Lozano-Gracia and Anselin (2012) para Bogotá y acercándose a XGBoost, que fue el mejor modelo. No obstante, las cadenas MCMC no convergieron ($\hat{R} \approx 1{,}43$), lo cual invalida los intervalos de credibilidad de las predicciones y de los valores SHAP. Por último, el análisis SHAP muestra que el área construida y el estrato son las variables de mayor asociación con el precio, seguidas por características geográficas como la distancia a *landmarks*.
 
-make install                    # runtime dependencies
-make install-dev                # ruff, for the PEP 8 gate
+**Palabras clave:** Estadística bayesiana; BART; recorte adaptativo de atípicos; valuación masiva de inmuebles; precios pedidos; inteligencia artificial explicable (XAI); valores SHAP; MCMC; Bogotá.
 
-make scrape                     # arriendo listings  (~45 min)
-make scrape-venta               # for-sale listings  (~70 min)
-```
+## Orden de lectura recomendado
 
-`make help` lists every target. Run commands from the repository root — the
-scraper imports the project-wide settings object from [config.py](config.py).
+Se recomienda el siguiente orden de lectura de los cuadernos (todos están alojados en la carpeta `notebooks/`):
+1. **Basic_EDA.ipynb:** Contiene un análisis y una contextualización general de los datos, las hipótesis y los objetivos del proyecto.
+2. **data_cleaning.ipynb:** Muestra el proceso de análisis de calidad de los datos, así como su limpieza; presenta con su justificación los pasos que posteriormente harán parte del pipeline.
+3. **data_preparation.ipynb:** Muestra el preprocesamiento de los datos; justifica cada paso de ingeniería, selección o codificación del pipeline y, además, muestra las relaciones de las características con la variable objetivo.
+4. **bivariate_eda.ipynb:** Muestra asociaciones clave entre las características y la variable objetivo; da un preámbulo a los hallazgos hechos con el modelo.
+5. **BART_Trees.ipynb:** Implementa el modelo BART(Atr) junto a su pipeline y muestra las métricas y los resultados principales del proyecto.
 
-Notebooks are the exception: launch them from `notebooks/`. They put the
-repository root on `sys.path` themselves so that `from utils... import ...`
-resolves.
+> Si se desea ahorrar tiempo, el producto final es `BART_Trees.ipynb`; no obstante, también se recomienda leer `Basic_EDA.ipynb` para comprender la generalidad de los datos.
 
-### Installing make
+> [!WARNING]
+> **No se recomienda ejecutar `BART_Trees.ipynb`:**
+> Una ejecución de este cuaderno desde cero puede tomar más de 8 horas; adicionalmente, su caché ocupa aproximadamente 120 GB.
 
-Python ships with the virtualenv; `make` does not, and Windows has none by
-default. Check with `make --version` before installing anything.
-
-**Windows** — either package manager works, in an *administrator* terminal:
-
-```powershell
-winget install ezwinports.make    # GNU Make 4.4.1
-choco install make                # if you already use Chocolatey
-```
-
-Open a new terminal afterwards so the updated `PATH` takes effect. There is no
-POSIX shell involved: the recipes run under `cmd.exe`, which is why every one of
-them is a Python invocation.
-
-**macOS** — `make` comes with the Xcode command line tools:
-
-```bash
-xcode-select --install            # GNU Make 3.81, enough for this project
-brew install make                 # optional: GNU Make 4.x, installed as gmake
-```
-
-If Homebrew's version is the one you want, either call `gmake` instead of
-`make`, or put its `gnubin` directory ahead of `/usr/bin` on your `PATH`.
-
-**Skipping make entirely.** Nothing here depends on it. Every target is a thin
-wrapper around one command, so you can run that command yourself:
-
-```bash
-.venv/Scripts/python.exe -m pytest tests -q                  # = make test
-.venv/Scripts/python.exe -m ruff check scraper src utils     # = make lint-py
-.venv/Scripts/python.exe -m scraper run --stage all \
-    --operation arriendo --city bogota --out ./out-arriendo-bogota   # = make scrape
-```
-
-Pass `--out` yourself when you do: the Makefile supplies
-`./out-<operation>-<city>`, and the pipeline refuses to mix two queries in one
-directory. Read the [Makefile](Makefile) to see what any other target expands to.
-
-## Layout
+## Estructura
 
 ```
-proyecto_finca_raiz_colombia/
-├── README.md                   # This file — what the project is and how to run it
-├── CLAUDE.md                   # Orientation for Claude Code
-├── REVIEW_TOS.md               # Read this before scraping at scale
-├── LICENSE                     # MIT
-├── .gitignore                  # Datasets and pipeline output stay out of git
-├── .env                        # FR_* scraper tunables (gitignored, optional)
-├── Makefile                    # Quality gate + scraper entry points
-├── config.py                   # The single Settings object, reads .env
-├── ruff.toml                   # PEP 8 rules (line length 79)
-├── requirements.txt            # Runtime dependencies
-├── requirements/
-│   └── dev.txt                 # Lint tooling (ruff)
-├── scraper/                    # The data pipeline — see scraper/README.md
-│   ├── README.md               # Field map, sharding, symptom→config table
-│   ├── pipeline.py             # Stage orchestration; one command runs 0–6
-│   ├── stages/                 # s0_discovery … s6_qa, one module per stage
-│   ├── config.yaml             # Everything site-specific lives here
-│   ├── models.py               # Pydantic schema of a listing and the artifact
-│   └── http.py, extract.py, …  # Fetching, parsing, checkpointing
-├── tests/
-│   └── scraper/                # 97 offline tests over saved fixtures
-├── tools/                      # clean.py, mk_help.py — called by the Makefile
-├── data/                       # Scraped datasets (gitignored, run make scrape)
-├── notebooks/                  # Exploratory analysis
-│   └── Basic_EDA.ipynb         # Univariate pass over the venta dataset
-├── utils/                      # Shared helpers — see utils/README.md
-│   ├── README.md               # What every helper does
-│   ├── plotting.py             # EDAPlotter, the chart toolkit
-│   ├── triple_plot.py          # Normality panel
-│   ├── geo.py                  # Coordinate sanity checks
-│   └── map_graph.py            # Listings map
-├── src/                        # Model code (empty for now)
-├── outputs/
-│   ├── tables/                 # CSV files holding results and summaries
-│   └── plots/                  # Figures and visualisations
-└── out-<operation>-<city>/     # Pipeline working directories (gitignored)
+BART-trees-for-estimating-housing-prices-in-Bogot-/
+├── README.md                       # Este archivo
+├── CLAUDE.md                       # Orientación para Claude Code
+├── REVIEW_TOS.md                   # Debe leerse antes de hacer scraping a gran escala
+├── LICENSE                         # MIT
+├── Makefile                        # Control de calidad y comandos del scraper
+├── config.py                       # Objeto único de configuración
+├── ruff.toml                       # Reglas de PEP 8 (longitud de línea 79)
+├── requirements.txt                # Dependencias de ejecución
+├── requirements/                   # Dependencias de desarrollo
+├── .github/                        # Integración continua (make quality)
+├── docs/                           # Artículo final en PDF
+├── scraper/                        # Pipeline de extracción de datos
+├── tests/                          # 97 pruebas sin conexión del scraper
+├── tools/                          # Utilidades que invoca el Makefile
+├── data/                           # Conjuntos de datos (excluidos de git)
+├── geodata/                        # Landmarks de Bogotá
+├── notebooks/                      # Cuadernos de Jupyter
+│   ├── Basic_EDA.ipynb
+│   ├── data_cleaning.ipynb
+│   ├── data_preparation.ipynb
+│   ├── bivariate_eda.ipynb
+│   ├── BART_Trees.ipynb
+│   └── bayesiana_primera_pt.ipynb
+├── utils/                          # Funciones auxiliares
+│   └── bart_article.py             # Implementación de BARTAtrRegressor
+├── src/                            # Reservada para código de modelos
+├── outputs/                        # Tablas y figuras
+├── cv_cache/                       # Caché de la validación cruzada (excluida de git)
+└── out-<operation>-<city>/         # Directorios de trabajo del scraper (excluidos de git)
 ```
 
-## The dataset
 
-The scraper emits a validated JSON artifact plus a flat CSV per query. Measured
-on the completed `venta` / `bogota` run:
+## Diccionario de variables
 
-```
-pages fetched   1,935          fetch errors        4
-parsed          39,206         parse errors        0
-duplicates      7,954          schema rejections   0
-final           31,252         coverage           91.3%
-```
+Las 31 columnas del CSV, en orden.
 
-Composition of that run: apartamento 12,337 · casa 9,135 · oficina 2,488 ·
-bodega 2,185 · local 1,693 · apartaestudio 1,313.
-
-Datasets are gitignored (`*.csv`, `out-*/`), so a clone has no data until you
-run `make scrape`. The current working file is
-`data/fincaraiz_venta_bogota_20260803.csv`.
-
-### Variable dictionary
-
-The 31 columns of the CSV, in order.
-
-| Variable | Unit | Description |
+| Variable | Unidad | Descripción |
 |---|---|---|
-| `listing_id` | id | Unique identifier of the listing on FincaRaíz. |
-| `operation` | category | Transaction advertised: `venta` (sale) or `arriendo` (rent). |
-| `property_type` | category | Class of property: `apartamento`, `casa`, `oficina`, `bodega`, `local`, `lote`, and similar. |
-| `price_amount` | COP | Asking price published in the listing. |
-| `price_currency` | category | Currency the asking price is quoted in. |
-| `admin_fee` | COP / month | Monthly building administration fee (*administración*). |
-| `total_monthly_cost` | COP / month | Rent plus administration fee; defined for rental listings. |
-| `price_per_m2` | COP / m² | Asking price divided by built area. |
-| `area_built_m2` | m² | Constructed area of the property. |
-| `area_private_m2` | m² | Private interior area of the unit. |
-| `bedrooms` | count | Number of bedrooms. |
-| `bathrooms` | count | Number of bathrooms. |
-| `parking_spaces` | count | Number of parking spaces included with the property. |
-| `stratum` | ordinal 1–6 | Colombian socio-economic stratum assigned to the address. |
-| `floor` | floor number | Floor of the building on which the unit sits. |
-| `floors_total` | count | Number of floors in the building. |
-| `age_bracket_code` | ordinal 0–5 | Age of the property as a bracket: 0 brand new, 1 under 1 year, 2 = 1–8, 3 = 9–15, 4 = 16–30, 5 over 30 years. |
-| `age_bracket_label` | category | Spanish text label of the age bracket. |
-| `construction_state` | category | Condition declared in the listing: `Usado`, `Excelente estado`, `En construcción`, and similar. |
-| `city` | name | Municipality where the property is located. |
-| `locality` | category | Bogotá *localidad* containing the property. |
-| `neighborhood` | name | Neighbourhood (*barrio*) of the property. |
-| `address_text` | text | Street address as published in the listing. |
-| `latitude` | degrees (WGS84) | Latitude of the property's map location. |
-| `longitude` | degrees (WGS84) | Longitude of the property's map location. |
-| `amenities` | list (`\|`-separated) | Amenities and features attributed to the property or its building. |
-| `agency_name` | name | Real-estate agency publishing the listing. |
-| `publisher_type` | category | Kind of publisher: `inmobiliaria` (agency) or `desarrollador` (developer). |
-| `published_at` | date (YYYY-MM-DD) | Date the listing was first published. |
-| `updated_at` | date (YYYY-MM-DD) | Date the listing was last updated. |
-| `source_url` | URL | Web address of the listing. |
+| `listing_id` | id | Identificador único del anuncio en FincaRaíz. |
+| `operation` | categoría | Tipo de transacción anunciada: `venta` o `arriendo`. |
+| `property_type` | categoría | Tipo de inmueble: `apartamento`, `casa`, `oficina`, `bodega`, `local`, `lote`, entre otros. |
+| `price_amount` | COP | Precio pedido publicado en el anuncio. |
+| `price_currency` | categoría | Moneda en la que se expresa el precio pedido. |
+| `admin_fee` | COP/mes | Cuota mensual de administración del inmueble. |
+| `total_monthly_cost` | COP/mes | Canon de arriendo más administración; definido solo para anuncios de arriendo. |
+| `price_per_m2` | COP/m² | Precio pedido dividido entre el área construida. |
+| `area_built_m2` | m² | Área construida del inmueble. |
+| `area_private_m2` | m² | Área privada interior de la unidad. |
+| `bedrooms` | conteo | Número de habitaciones. |
+| `bathrooms` | conteo | Número de baños. |
+| `parking_spaces` | conteo | Número de parqueaderos incluidos con el inmueble. |
+| `stratum` | ordinal 1–6 | Estrato socioeconómico asignado a la dirección. |
+| `floor` | número de piso | Piso del edificio en el que se ubica la unidad. |
+| `floors_total` | conteo | Número total de pisos del edificio. |
+| `age_bracket_code` | ordinal 0–5 | Antigüedad del inmueble por rangos: 0 = a estrenar, 1 = menos de 1 año, 2 = 1–8 años, 3 = 9–15 años, 4 = 16–30 años, 5 = más de 30 años. |
+| `age_bracket_label` | categoría | Etiqueta en texto (español) del rango de antigüedad. |
+| `construction_state` | categoría | Estado declarado en el anuncio: `Usado`, `Excelente estado`, `En construcción`, entre otros. |
+| `city` | nombre | Municipio en el que se ubica el inmueble. |
+| `locality` | categoría | Localidad de Bogotá que contiene el inmueble. |
+| `neighborhood` | nombre | Barrio del inmueble. |
+| `address_text` | texto | Dirección tal como aparece publicada en el anuncio. |
+| `latitude` | grados (WGS84) | Latitud de la ubicación del inmueble en el mapa. |
+| `longitude` | grados (WGS84) | Longitud de la ubicación del inmueble en el mapa. |
+| `amenities` | lista (sep. por `\|`) | Amenidades y características atribuidas al inmueble o a su edificio. |
+| `agency_name` | nombre | Inmobiliaria que publica el anuncio. |
+| `publisher_type` | categoría | Tipo de anunciante: `inmobiliaria` o `desarrollador`. |
+| `published_at` | fecha (AAAA-MM-DD) | Fecha de la primera publicación del anuncio. |
+| `updated_at` | fecha (AAAA-MM-DD) | Fecha de la última actualización del anuncio. |
+| `source_url` | URL | Dirección web del anuncio. |
 
-The JSON artifact carries a few fields the CSV flattens away — notably the
-`price_currency_is_foreign` flag, so from the CSV, judge currency on
-`price_currency` before pooling prices. It also keeps `amenities` as
-`{id, name, group}` objects instead of pipe-joined names.
+El artefacto JSON conserva algunos campos que el CSV aplana, en particular la bandera `price_currency_is_foreign`; por ello, al trabajar con el CSV, se debe revisar la moneda en `price_currency` antes de agrupar precios. Asimismo, conserva `amenities` como objetos `{id, name, group}` en lugar de nombres unidos por `|`.
 
-### Three things to know before modelling
 
-- **`age_years` is always null, deliberately.** The site publishes an age
-  *bracket* ("más de 30 años"), never an exact year. Use `age_bracket_code` as
-  an ordinal factor; a midpoint would be invented precision.
-- **Nulls are informative, not missing at random.** The site writes `0` for
-  values it does not publish, and the scraper restores those to null rather
-  than treating them as real zeros. The rate depends on the operation, which is
-  itself a signal:
+### Qué contiene cada cuaderno
 
-  | Field | null in `arriendo` | null in `venta` |
-  |---|---|---|
-  | `admin_fee` | 75.6% | 43.5% |
-  | `floor` | 55.9% | 50.5% |
-  | `parking_spaces` | 63.5% | 34.5% |
-
-  Treat these as *not disclosed* and consider modelling the disclosure
-  mechanism rather than dropping or zero-filling the rows.
-- **Coverage is measured, not assumed.** 91.3% on the venta run. The remainder
-  is unreachable because the site's result ordering is unstable at depth — see
-  the explanation in [scraper/README.md](scraper/README.md). Any market-level
-  total from this data is a lower bound.
-
-## Analysis
-
-### Helpers at a glance
-
-Four modules in [utils/](utils/), documented in [utils/README.md](utils/README.md).
-
-| Module | What it does |
+| Cuaderno | Contenido |
 |---|---|
-| [plotting.py](utils/plotting.py) | `EDAPlotter`, the whole chart set behind one class: hand it the DataFrame, ask for a column by name. |
-| [triple_plot.py](utils/triple_plot.py) | Histogram, boxplot and Q-Q in one panel with a normality test, on raw, log-scaled or log-transformed data. |
-| [geo.py](utils/geo.py) | Checks latitude and longitude against a Cundinamarca bounding box and counts what falls outside it. |
-| [map_graph.py](utils/map_graph.py) | Draws the listings on an interactive Folium map with clustered markers. |
+| `Basic_EDA.ipynb` | Contexto, pregunta, hipótesis y primera descripción de los datos. |
+| `data_cleaning.ipynb` | Calidad de los datos, patrón de faltantes, imputación y atípicos. |
+| `data_preparation.ipynb` | Creación de variables, codificación y VIF. |
+| `bivariate_eda.ipynb` | Asociaciones de las variables con el precio y entre sí. |
+| `BART_Trees.ipynb` | Pipeline, validación cruzada, MCMC, SHAP y métricas finales. |
+| `bayesiana_primera_pt.ipynb` | Primer avance: modelos Beta-Binomial, Multinomial-Dirichlet y Normal-Gamma Inversa. |
 
-### Where the notebook is
+## Objeto `BARTAtrRegressor` explicado
 
-[notebooks/Basic_EDA.ipynb](notebooks/Basic_EDA.ipynb) is a univariate pass over
-the venta dataset. It currently produces:
+Se generó una clase llamada `BARTAtrRegressor`, alojada en [utils/bart_article.py](utils/bart_article.py), para implementar el método de recorte adaptativo de atípicos de Cao et al. (2024). Esta clase se basa en un envoltorio que reentrena árboles BART de la librería `stochtree` y, al seguir la interfaz de scikit-learn, puede usarse dentro de un `Pipeline` o de una validación cruzada.
 
-- bar charts for the categorical and discrete columns
-- normality panels for the continuous columns, run three ways — untransformed,
-  on a log axis, and on log-transformed data
-- a coordinate check against the Cundinamarca box
-- a missing-value matrix
-- Pearson and Kendall correlation heatmaps
-- a map of the listing locations
+La idea central consiste en comparar los residuos ordenados del modelo con los que se esperarían si el ruido fuese normal: mientras ambos coincidan, las observaciones se consideran limpias; cuando los residuos observados crecen por encima de lo esperado, las observaciones restantes se tratan como atípicas y se reentrena el modelo sin ellas. A continuación, se detalla su funcionamiento. Después de cada fórmula se incluye el fragmento de [utils/bart_article.py](utils/bart_article.py) que la implementa, sin anotaciones de tipo ni comentarios.
 
-No conclusions have been written up yet, and no model has been fitted.
+**Paso 1. Entrenar el modelo.** Se entrena el modelo BART inicial $f(x_i)$ para obtener las predicciones $\hat{y}_i = \hat{f}(x_i)$ (`_fit_bart`).
 
-## Code quality
-
-```bash
-make quality     # ruff check + format check across notebooks, scraper, src, utils
-make test        # 97 offline tests
-make validate    # both
-make format      # auto-fix
+```python
+model = self._fit_bart(
+    X_arr, y_arr, self.num_chains if initial_is_final else 1
+)
 ```
 
-`make quality` checks notebooks cell by cell. Line length is PEP 8's 79 —
-raise it in [ruff.toml](ruff.toml) if it fights the analysis code.
+**Paso 2. Calcular residuos.** Se obtienen los residuos $\hat{\varepsilon}_i = y_i - \hat{y}_i$ y se ordenan por su valor absoluto de menor a mayor:
 
-## Before scraping at scale
+```math
+|\hat{\varepsilon}|_{(1)} \le |\hat{\varepsilon}|_{(2)} \le \cdots \le |\hat{\varepsilon}|_{(n)}
+```
 
-Read [REVIEW_TOS.md](REVIEW_TOS.md). It covers the site's terms of use and
-Ley 1581 de 2012 / Decreto 1377 de 2013. In short: the scraper never records
-contact details, defaults to a conservative rate, and stops rather than
-attempting to evade a block — but holding and publishing the data is still your
-call to make deliberately.
+```python
+resid = y_arr - self._draws(model, X_arr).mean(axis=1)
+abs_sorted = np.sort(np.abs(resid))
+```
 
-## License
+**Paso 3. Estimar la varianza con el 25 % de residuos más pequeños.** Se calcula la estimación robusta $\hat{\sigma}^2$ utilizando únicamente los primeros $\lfloor n/4 \rfloor$ residuos absolutos ordenados, y se corrige la escala usando la distribución teórica (`robust_sigma2` y `folded_normal_quantiles`):
+
+```math
+\hat{\sigma}^2 = \frac{\sum_{i=1}^{\lfloor n/4 \rfloor} |\hat{\varepsilon}|_{(i)}^2}{\sum_{i=1}^{\lfloor n/4 \rfloor} \left[ \Phi^{-1}\left( \frac{1 + \tilde{p}_i}{2} \right) \right]^2}
+```
+
+donde $\tilde{p}_i = \frac{i}{n+1}$.
+
+```python
+def folded_normal_quantiles(n):
+    p_tilde = np.arange(1, n + 1) / (n + 1)
+    return norm.ppf((1 + p_tilde) / 2)
+
+
+def robust_sigma2(abs_sorted, z, frac=0.25):
+    k = max(1, int(np.floor(len(abs_sorted) * frac)))
+    return float(np.sum(abs_sorted[:k] ** 2) / np.sum(z[:k] ** 2))
+
+
+z = folded_normal_quantiles(n)
+sigma2 = robust_sigma2(abs_sorted, z, self.sigma_frac)
+```
+
+**Paso 4. Calcular la varianza muestral acumulada.** Para cada $i = 1, \ldots, n$, se obtiene el promedio de los $i$ residuos cuadrados más pequeños (`estimate_p`):
+
+```math
+s_i^2 = \frac{1}{i} \sum_{j=1}^{i} |\hat{\varepsilon}|_{(j)}^2
+```
+
+```python
+i = np.arange(1, len(abs_sorted) + 1)
+np.cumsum(abs_sorted**2) / i
+```
+
+En el código, los pasos 4 a 6 conforman una sola expresión: el paso 4 es el numerador de `ratio` y el paso 5 su denominador, razón por la cual aquí se muestran como expresiones sueltas.
+
+**Paso 5. Calcular el valor esperado de $s_i^2$.** Se determina la línea de base teórica utilizando los cuantiles de la distribución normal plegada, escalados por $\hat{\sigma}$ (`estimate_p`):
+
+```math
+E(s_i^2) = \frac{1}{i} \sum_{j=1}^{i} \xi_j^2, \qquad \xi_j = F^{-1}(\tilde{p}_j) = \hat{\sigma} \cdot \Phi^{-1}\left( \frac{1 + \tilde{p}_j}{2} \right)
+```
+
+```python
+sigma2 * np.cumsum(z**2) / i
+```
+
+Aquí `z` contiene los cuantiles de la normal plegada estándar y $\hat{\sigma}^2$ sale como factor común de la suma, de modo que la expresión equivale a $\frac{1}{i} \sum_{j=1}^{i} \xi_j^2$.
+
+**Paso 6. Definir el conjunto de observaciones válidas.** Se evalúa la condición de tolerancia con el parámetro de sintonización $Q$ ($Q = 1{,}28$) para definir el conjunto $S$ (`estimate_p`):
+
+```math
+S = \left\{ i \in \{1, \ldots, n\} : \frac{s_i^2}{E(s_i^2)} \le Q \right\}
+```
+
+```python
+ratio = (np.cumsum(abs_sorted**2) / i) / (
+    sigma2 * np.cumsum(z**2) / i
+)
+return float(np.sum(ratio <= Q) / len(abs_sorted)), ratio
+```
+
+**Paso 7. Rearmar el conjunto de entrenamiento.** Se asigna la función de ponderación $w_i = \psi(\hat{\varepsilon}_i)$ a cada observación para filtrar los atípicos, y se reentrena el modelo solo con las observaciones de peso 1 (bucle de `fit`):
+
+```math
+\psi(\hat{\varepsilon}_i) = \begin{cases} 1, & |\hat{\varepsilon}_i| \le |\hat{\varepsilon}|_{(\lfloor n\hat{p} \rfloor)} \\ 0, & |\hat{\varepsilon}_i| > |\hat{\varepsilon}|_{(\lfloor n\hat{p} \rfloor)} \end{cases}
+```
+
+```python
+p_hat, _ = estimate_p(abs_sorted, z, sigma2, self.Q)
+p_hat = max(p_hat, self.p_min)
+k_pos = max(1, int(np.floor(n * p_hat)))
+threshold = float(abs_sorted[k_pos - 1])
+weights = (np.abs(resid) <= threshold).astype(int)
+
+model = self._fit_bart(
+    X_arr[weights == 1],
+    y_arr[weights == 1],
+    self.num_chains if final else 1,
+)
+```
+
+**Paso 8. Verificar la convergencia.** Se actualiza la proporción estimada $\hat{p}^{(Iter)} = |S|/n$ y se verifica el criterio de convergencia con respecto a la tolerancia $\tau = 10^{-4}$ (bucle de `fit`):
+
+```math
+\frac{\left| \hat{p}^{(Iter)} - \hat{p}^{(Iter-1)} \right|}{\hat{p}^{(Iter)}} < \tau
+```
+
+```python
+final = (
+    abs(p_hat - p_old) / p_hat < self.tol
+    or it == self.max_iter
+)
+if final:
+    break
+p_old = p_hat
+```
+
+En el código, `final` se calcula antes del reajuste del paso 7, ya que define cuántas cadenas utiliza ese ajuste; si el criterio no se cumple, el bucle vuelve al paso 2.
+
+El proceso se repite hasta converger o hasta llegar al máximo de iteraciones ($\text{Iter}_{\text{máx}} = 20$).
+
+Los hiperparámetros propios del recorte son los siguientes:
+
+| Parámetro | Valor | Justificación |
+|---|---|---|
+| `Q` | 1,28 | Umbral de $s_i^2 / E(s_i^2)$ para definir $S$; elegido por Cao et al. (2024) por su balance entre precisión y costo. |
+| `trim` | `True` | Activa el recorte duro: los pesos $\psi(\hat{\varepsilon}_i)$ valen 0 o 1 y excluyen los atípicos. |
+| `sigma_frac` | 0,25 | Estima $\sigma^2$ solo con el 25 % de residuos más pequeños, Cao et al. (2024). |
+| `p_min` | 0,5 | Valor inicial $\hat{p}^{(0)} = 0{,}5$ y cota inferior: se recorta como máximo la mitad de los datos. |
+| `tol` | $10^{-4}$ | Tolerancia relativa $\tau$ sobre $\hat{p}$ para detener la iteración, Cao et al. (2024). |
+| `max_iter` | 20 | Máximo de iteraciones del recorte, Cao et al. (2024). |
+
+Cabe resaltar dos detalles de la implementación. Por un lado, `p_min` es una salvaguarda que no hace parte del método original: la proporción usada en el recorte es $\hat{p} = \max(|S|/n, p_{min})$, lo cual evita que una iteración inestable elimine casi todos los datos. Por otro lado, únicamente el ajuste final corre con `num_chains` cadenas, ya que los reajustes intermedios solo aportan residuos; de esta manera, el diagnóstico de convergencia se realiza sobre el modelo definitivo con un menor costo computacional.
+
+Su uso es el de cualquier regresor de scikit-learn:
+
+```python
+from utils.bart_article import BARTAtrRegressor
+
+modelo = BARTAtrRegressor(
+    Q=1.28,
+    num_burnin=3000,
+    num_mcmc=6000,
+    num_chains=2,
+    num_gfr=2,
+    keep_every=5,
+    random_state=42,
+).fit(X, y)
+
+modelo.predict(X)  # Media posterior de f(x)
+modelo.posterior_draws(X)  # Muestras de f(x): (cadena, muestra, fila)
+modelo.p_hat_  # Proporción estimada de datos limpios
+modelo.outliers_  # Índices de las filas recortadas
+```
+
+## Conclusión y discusión de resultados
+
+En general, los objetivos se cumplieron satisfactoriamente: se logró generar un sistema AVM con alta capacidad explicativa mediante XAI; además, se logró superar con creces el rendimiento de la propuesta de Lozano-Gracia and Anselin (2012) para Bogotá, incluso con el modelo BART (Árboles). Adicionalmente, aunque las métricas de Iban (2022) sean superiores, se considera una ganancia que el modelo BART propuesto se haya acercado significativamente, teniendo en cuenta que el presente proyecto considera toda la ciudad y no solo un sector de esta.
+
+### Conclusiones y trabajo futuro
+
+Se logró interpretar el modelo mediante métodos SHAP y se confirmaron las hipótesis 1, 2, 3 y 5. La variable que indicaba la cercanía al transporte público no fue considerada en la selección final, por lo que la hipótesis 4 no se logró demostrar.
+
+Dado que la cadena MCMC no convergió (a pesar del extenso tiempo de entrenamiento), no se logró cumplir el objetivo específico relacionado con la inferencia bayesiana completa; a pesar de esto, se logró proponer una primera iteración de esta clase de modelos que se acerca al rendimiento predictivo de arquitecturas ya consolidadas en la literatura dentro de un contexto urbano real. Por lo tanto, los trabajos futuros se centrarán en experimentar con distintas distribuciones a priori o en modificar el conjunto de entradas mediante ingeniería de características avanzada, esto con el fin de alcanzar la convergencia de la cadena MCMC y aprovechar con total rigor las propiedades bayesianas del modelo. Además, cabe recordar que una limitación clave del proyecto (y en general en mercados como Bogotá) es la falta de datos sobre los precios de venta, lo cual obliga a utilizar los precios pedidos, tal como lo hace este artículo y otros autores.
+
+## Calidad del código
+
+```bash
+make quality     # ruff check y verificación de formato en notebooks, scraper, src y utils
+make test        # 97 pruebas sin conexión
+make validate    # ambos
+make format      # corrección automática
+```
+
+`make quality` revisa los cuadernos celda por celda. La longitud de línea es la de PEP 8, 79 caracteres; si dificulta el código de análisis, se puede aumentar en [ruff.toml](ruff.toml).
+
+## Licencia
 
 [MIT](LICENSE) © 2026 Juan Pablo Carrillo Hortua

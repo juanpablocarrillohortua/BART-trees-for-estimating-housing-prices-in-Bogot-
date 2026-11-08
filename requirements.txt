@@ -12,6 +12,7 @@ branca==0.8.2
 brotli==1.2.0
 certifi==2026.7.22
 charset-normalizer==3.4.9
+cloudpickle==3.1.2
 colorama==0.4.6
 comm==0.2.3
 contourpy==1.3.3
@@ -42,8 +43,9 @@ jupyter_client==8.9.1
 jupyter_core==5.9.1
 jupyterlab_widgets==3.0.17
 kiwisolver==1.5.0
-lightgbm==4.7.0
 lazy-loader==0.6
+lightgbm==4.7.0
+llvmlite==0.50.0
 markdown-it-py==4.2.0
 MarkupSafe==3.0.3
 matplotlib==3.11.1
@@ -53,6 +55,7 @@ missingno==0.5.2
 narwhals==2.24.0
 nbformat==5.11.1
 nest-asyncio2==1.7.2
+numba==0.68.1
 numpy==2.5.1
 packaging==26.2
 pandas==3.0.5
@@ -86,8 +89,10 @@ scikit-learn==1.9.0
 scipy==1.18.0
 seaborn==0.13.2
 selectolax==0.4.11
+shap==0.54.1
 shellingham==1.5.4
 six==1.17.0
+slicer==0.0.8
 stack-data==0.6.3
 statsmodels==0.14.6
 stochtree==0.4.5
@@ -104,7 +109,7 @@ tzdata==2026.3
 urllib3==2.7.0
 wcwidth==0.8.2
 widgetsnbextension==4.0.16
-xgboost==3.4.1
 xarray==2026.9.0
 xarray-einstats==0.11.0
+xgboost==3.4.1
 xyzservices==2026.3.0
